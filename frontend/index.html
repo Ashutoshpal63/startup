@@ -2,208 +2,208 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>JWT Auth Panel</title>
+  <title>JWT Auth Admin Panel</title>
   <style>
     body { font-family: sans-serif; background: #f9f9f9; padding: 2rem; }
-    .box { background: white; padding: 1rem 2rem; border-radius: 8px; box-shadow: 0 0 10px #ddd; margin-bottom: 1.5rem; max-width: 800px; margin: auto; }
+    .box { background: white; padding: 1rem 2rem; border-radius: 8px; box-shadow: 0 0 10px #ddd; margin-bottom: 1.5rem; max-width: 800px; margin-left: auto; margin-right: auto; }
     input, select, button { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; }
     button { background: #2c7be5; color: white; border: none; border-radius: 4px; cursor: pointer; }
     button:hover { background: #1a5ed8; }
     h2, h3 { text-align: center; }
-    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    pre, table { background: #f0f0f0; padding: 1rem; white-space: pre-wrap; overflow: auto; width: 100%; }
+    table { border-collapse: collapse; margin-top: 1rem; }
     th, td { padding: 8px; border: 1px solid #ccc; text-align: left; }
     .admin-section, .customer-section { display: none; margin-top: 1rem; }
   </style>
 </head>
 <body>
 
-<h2>🔐 JWT Auth Panel</h2>
+  <h2>🔐 JWT Auth — Admin Panel</h2>
 
-<!-- 🔐 LOGIN FORM -->
-<div class="box" id="loginBox">
-  <h3>🔑 Login</h3>
-  <input type="text" id="email" placeholder="Email" />
-  <input type="password" id="password" placeholder="Password" />
-  <select id="role">
-    <option value="customer">Customer</option>
-    <option value="admin">Admin</option>
-  </select>
-  <button onclick="login()">Login</button>
-  <button onclick="showRegister()">Register as New User</button>
-</div>
+  <div class="box" id="loginBox">
+    <h3>🔑 Login</h3>
+    <input type="text" id="email" placeholder="Email" value="admin1@example.com" />
+    <input type="password" id="password" placeholder="Password" value="123456" />
+    <select id="role">
+      <option value="customer">Customer</option>
+      <option value="admin">Admin</option>
+    </select>
+    <button onclick="login()">Login</button>
+  </div>
 
-<!-- ✍️ REGISTER FORM -->
-<div class="box" id="registerBox" style="display:none;">
-  <h3>✍️ Register</h3>
-  <input type="text" id="regName" placeholder="Name" />
-  <input type="email" id="regEmail" placeholder="Email" />
-  <input type="password" id="regPassword" placeholder="Password" />
-  <button onclick="register()">Register & Login</button>
-  <button onclick="showLogin()">Back to Login</button>
-</div>
+  <div class="box" id="registerBox">
+    <h3>📝 Register New User</h3>
+    <input type="text" id="regName" placeholder="Full Name" />
+    <input type="text" id="regEmail" placeholder="Email" />
+    <input type="password" id="regPassword" placeholder="Password" />
+    <select id="regRole">
+      <option value="customer">Customer</option>
+    </select>
+    <button onclick="register()">Register</button>
+  </div>
 
-<!-- 🧑‍💼 Admin Panel -->
-<div class="box admin-section" id="adminPanel">
-  <h3>Admin Dashboard</h3>
-  <button onclick="loadData('users')">View Users</button>
-  <button onclick="loadData('orders')">View Orders</button>
-  <button onclick="loadData('shops')">View Shops</button>
-  <button onclick="loadData('delivery')">View Delivery Agents</button>
-</div>
+  <div class="box admin-section" id="adminPanel">
+    <h3>🧑‍💼 Admin Dashboard</h3>
+    <button onclick="loadData('users')">View Users</button>
+    <button onclick="loadData('orders')">View Orders</button>
+    <button onclick="loadData('shops')">View Shops</button>
+    <button onclick="loadData('delivery')">View Delivery Agents</button>
+  </div>
 
-<!-- 👤 Customer Panel -->
-<div class="box customer-section" id="customerPanel">
-  <h3>Customer Dashboard</h3>
-  <button onclick="loadData('me')">My Profile</button>
-  <button onclick="loadData('myorders')">My Orders</button>
-  <button onclick="loadData('payment')">My Payment Methods</button>
-</div>
+  <div class="box customer-section" id="customerPanel">
+    <h3>👤 Customer Dashboard</h3>
+    <button onclick="loadData('me')">My Profile</button>
+    <button onclick="loadData('myorders')">My Orders</button>
+    <button onclick="loadData('payment')">My Payment Methods</button>
+  </div>
 
-<!-- 📦 Output -->
-<div class="box" id="outputBox">
-  <h3>📦 Output</h3>
-  <pre id="output">Awaiting action...</pre>
-  <div id="tableContainer"></div>
-  <button onclick="decodeToken()">Show Decoded JWT</button>
-  <button onclick="logout()">Logout</button>
-</div>
+  <div class="box" id="outputBox">
+    <h3>📦 Output</h3>
+    <pre id="output">Awaiting action...</pre>
+    <div id="tableContainer"></div>
+    <button onclick="decodeToken()">Show Decoded JWT</button>
+    <button onclick="logout()">Logout</button>
+  </div>
 
-<script>
-  const API = 'http://localhost:5000';
+  <script>
+    const API = 'http://localhost:5000';
 
-  function login() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const role = document.getElementById('role').value;
-    const endpoint = role === 'admin' ? '/api/admin/login' : '/api/auth/login';
+    function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const role = document.getElementById('role').value;
+      const endpoint = role === 'admin' ? '/api/admin/login' : '/api/auth/login';
 
-    fetch(`${API}${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('role', role);
-        localStorage.setItem('userId', data.user?.id || data.admin?.id || '');
-        show(`✅ Logged in as ${role.toUpperCase()}`);
-        updateUI();
-      } else {
-        show(`❌ Login failed:\n${JSON.stringify(data)}`);
+      fetch(`${API}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('role', role);
+          localStorage.setItem('userId', data.user?.id || data.admin?.id || '');
+          show(`✅ Logged in as ${role.toUpperCase()}`);
+          updateUI();
+        } else {
+          show(`❌ Login failed:\n${JSON.stringify(data)}`);
+        }
+      });
+    }
+
+    function register() {
+      const name = document.getElementById('regName').value;
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      const role = document.getElementById('regRole').value;
+
+      fetch(`${API}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, role })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('role', role);
+          localStorage.setItem('userId', data.user?.id || '');
+          show(`✅ Registered and logged in as ${role.toUpperCase()}`);
+          updateUI();
+        } else {
+          show(`❌ Registration failed:\n${JSON.stringify(data)}`);
+        }
+      });
+    }
+
+    function logout() {
+      localStorage.clear();
+      updateUI();
+      show("👋 Logged out. Token cleared.");
+      document.getElementById('tableContainer').innerHTML = '';
+    }
+
+    function decodeToken() {
+      const token = localStorage.getItem('token');
+      if (!token) return show("❌ No token found.");
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        show(`🔍 Decoded JWT:\n${JSON.stringify(payload, null, 2)}`);
+      } catch (e) {
+        show("❌ Failed to decode token.");
       }
-    });
-  }
+    }
 
-  function register() {
-    const name = document.getElementById('regName').value;
-    const email = document.getElementById('regEmail').value;
-    const password = document.getElementById('regPassword').value;
+    function updateUI() {
+      const role = localStorage.getItem('role');
+      document.getElementById('adminPanel').style.display = role === 'admin' ? 'block' : 'none';
+      document.getElementById('customerPanel').style.display = role === 'customer' ? 'block' : 'none';
+      const showLogin = !role;
+      document.getElementById('loginBox').style.display = showLogin ? 'block' : 'none';
+      document.getElementById('registerBox').style.display = showLogin ? 'block' : 'none';
+    }
 
-    fetch(`${API}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, role: 'customer' })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('role', 'customer');
-        localStorage.setItem('userId', data.user?.id || '');
-        show(`✅ Registered and logged in as CUSTOMER`);
-        updateUI();
-      } else {
-        show(`❌ Registration failed:\n${JSON.stringify(data)}`);
-      }
-    });
-  }
-
-  function logout() {
-    localStorage.clear();
-    updateUI();
-    show("👋 Logged out.");
+    function show(msg) {
+    const output = document.getElementById('output');
+    output.textContent = '';
+    output.scrollTop = 0;
+    output.textContent = msg;
     document.getElementById('tableContainer').innerHTML = '';
   }
+    function loadData(type) {
+      const token = localStorage.getItem('token');
+      if (!token) return show("❌ No token found");
 
-  function decodeToken() {
-    const token = localStorage.getItem('token');
-    if (!token) return show("❌ No token found.");
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      show(`🔍 Decoded JWT:\n${JSON.stringify(payload, null, 2)}`);
-    } catch {
-      show("❌ Failed to decode token.");
+      const endpoints = {
+        users: '/api/users',
+        orders: '/api/orders',
+        shops: '/api/shops',
+        delivery: '/api/delivery',
+        me: '/api/users/me',
+        myorders: '/api/orders/my',
+        payment: '/api/users/me/payment'
+      };
+
+      fetch(`${API}${endpoints[type]}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        const actualData = Array.isArray(data) ? data : data.data || [data];
+        renderTable(actualData);
+        show(`✅ ${type.toUpperCase()} loaded:\n` + JSON.stringify(data, null, 2));
+      })
+      .catch(() => {
+        show("❌ Failed to load data");
+      });
     }
-  }
 
-  function updateUI() {
-    const role = localStorage.getItem('role');
-    document.getElementById('adminPanel').style.display = role === 'admin' ? 'block' : 'none';
-    document.getElementById('customerPanel').style.display = role === 'customer' ? 'block' : 'none';
-    document.getElementById('loginBox').style.display = role ? 'none' : 'block';
-    document.getElementById('registerBox').style.display = 'none';
-  }
+    function renderTable(data) {
+      const container = document.getElementById('tableContainer');
+      if (!data.length) return (container.innerHTML = '<p>No data found.</p>');
 
-  function loadData(type) {
-    const token = localStorage.getItem('token');
-    if (!token) return show("❌ No token found.");
+      const headers = Object.keys(data[0]);
+      let html = `<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+      html += data.map(row =>
+        `<tr>${headers.map(h => `<td>${format(row[h])}</td>`).join('')}</tr>`
+      ).join('');
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
 
-    const endpoints = {
-      users: '/api/users',
-      orders: '/api/orders',
-      shops: '/api/shops',
-      delivery: '/api/delivery',
-      me: '/api/users/me',
-      myorders: '/api/orders/my',
-      payment: '/api/users/me/payment'
-    };
+    function format(val) {
+      if (typeof val === 'object' && val !== null) return JSON.stringify(val);
+      return val ?? '';
+    }
 
-    fetch(`${API}${endpoints[type]}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    .then(res => res.json())
-    .then(data => {
-      const actualData = Array.isArray(data) ? data : data.data || [data];
-      renderTable(actualData);
-      show(`✅ ${type.toUpperCase()} loaded:\n` + JSON.stringify(data, null, 2));
-    })
-    .catch(() => show("❌ Failed to load data."));
-  }
-
-  function renderTable(data) {
-    const container = document.getElementById('tableContainer');
-    if (!data.length) return (container.innerHTML = '<p>No data found.</p>');
-    const headers = Object.keys(data[0]);
-    let html = `<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>`;
-    html += data.map(row => `<tr>${headers.map(h => `<td>${format(row[h])}</td>`).join('')}</tr>`).join('');
-    html += '</tbody></table>';
-    container.innerHTML = html;
-  }
-
-  function format(val) {
-    if (typeof val === 'object' && val !== null) return JSON.stringify(val);
-    return val ?? '';
-  }
-
-  function showRegister() {
-    document.getElementById('loginBox').style.display = 'none';
-    document.getElementById('registerBox').style.display = 'block';
-  }
-
-  function showLogin() {
-    document.getElementById('registerBox').style.display = 'none';
-    document.getElementById('loginBox').style.display = 'block';
-  }
-
- window.onload = () => {
-  // 🧹 Clear token and role on every refresh
-  localStorage.clear();
-  updateUI();
-  show("🔄 Page reloaded — logged out.");
-};
-</script>
+     window.onload = () => {
+    localStorage.clear();
+    updateUI();
+    show("🔄 Page reloaded — logged out.");
+  };
+  </script>
 
 </body>
 </html>
