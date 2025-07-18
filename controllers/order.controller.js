@@ -1,196 +1,131 @@
 import Order from '../schema/order.js';
-import DeliveryAgent from '../schema/deliveryagent.js';
+import User from '../schema/user.js'; // Agents are now Users
 
-// ✅ Place a new order (User)
+// Place a new order (User)
 export const createOrder = async (req, res) => {
   try {
     const { shopId, products, deliveryAddress, paymentMethod } = req.body;
-    const userId = req.user._id;
+    
+    // Calculate total amount on the server-side for security
+    const totalAmount = products.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-    // 🔢 Calculate total amount
-    const totalAmount = products.reduce((sum, item) => {
-      return sum + item.price * item.quantity;
-    }, 0);
-
-    // 🔍 Find an available delivery agent
-    const availableAgent = await DeliveryAgent.findOne({ isAvailable: true });
+    // Find an available delivery agent
+    const availableAgent = await User.findOne({ role: 'delivery', isAvailable: true });
     if (!availableAgent) {
-      return res.status(400).json({ message: 'No delivery agents available at the moment' });
+      return res.status(400).json({ message: 'No delivery agents available at the moment.' });
     }
 
-    // 📦 Create order
-    const newOrder = new Order({
-      userId,
+    const newOrder = await Order.create({
+      userId: req.user._id,
       shopId,
       deliveryAgentId: availableAgent._id,
       products,
       totalAmount,
       deliveryAddress,
       paymentMethod,
-      status: 'pending'
     });
 
-    await newOrder.save();
-
-    // 🚚 Mark agent as unavailable + assign order
+    // Mark agent as unavailable
     availableAgent.isAvailable = false;
-    availableAgent.assignedOrders.push(newOrder._id);
     await availableAgent.save();
 
-    res.status(201).json(newOrder);
+    res.status(201).json({ status: 'success', data: newOrder });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Order creation failed' });
+    res.status(500).json({ error: 'Order creation failed', message: err.message });
   }
 };
 
-// ✅ Update order status (Admin/Delivery)
+// Update order status (Admin/Delivery)
 export const updateOrderStatus = async (req, res) => {
   try {
-    const orderId = req.params.id;
     const { status } = req.body;
-
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
-    // 🔒 Delivery agent can only update their own orders
-    if (req.user.role === 'delivery') {
-      if (!order.deliveryAgentId || order.deliveryAgentId.toString() !== req.user._id.toString()) {
-        return res.status(403).json({ message: 'Not your assigned order' });
-      }
+    // Authorization for delivery agents
+    if (req.user.role === 'delivery' && order.deliveryAgentId.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ message: 'This is not your assigned order.' });
     }
 
     order.status = status;
     await order.save();
 
-    // ✅ Mark agent available if delivered
+    // If order delivered, make agent available again
     if (status === 'delivered') {
-      const agent = await DeliveryAgent.findById(order.deliveryAgentId);
-      if (agent) {
-        agent.isAvailable = true;
-        await agent.save();
-      }
+      await User.findByIdAndUpdate(order.deliveryAgentId, { isAvailable: true });
     }
 
-    res.json({ message: 'Order status updated successfully', order });
+    res.json({ message: 'Order status updated successfully', data: order });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update order status' });
   }
 };
 
-// ✅ Get all orders (Admin)
+// Get all orders (Admin)
 export const getAllOrders = async (req, res) => {
   try {
-    const {
-      status,
-      shopId,
-      dateFrom,
-      dateTo,
-      page = 1,
-      limit = 10
-    } = req.query;
-
-    const query = {};
-
-    if (status) query.status = status;
-    if (shopId) query.shopId = shopId;
-
-    if (dateFrom || dateTo) {
-      query.createdAt = {};
-      if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
-      if (dateTo) query.createdAt.$lte = new Date(dateTo);
-    }
-
-    const skip = (page - 1) * limit;
-
-    const orders = await Order.find(query)
+    const orders = await Order.find(req.query)
       .populate('userId', 'name email')
       .populate('shopId', 'name')
-      .populate('deliveryAgentId', 'name phone')
-      .skip(skip)
-      .limit(Number(limit))
-      .sort({ createdAt: -1 });
+      .populate({ path: 'deliveryAgentId', select: 'name phone' }); // Populate agent info from User model
 
-    const total = await Order.countDocuments(query);
-
-    res.status(200).json({
-      status: 'success',
-      total,
-      page: Number(page),
-      pages: Math.ceil(total / limit),
-      data: orders
-    });
+    res.status(200).json({ status: 'success', results: orders.length, data: orders });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
 
 
-// ✅ Get current user’s orders (User)
+// Get current user’s orders (Customer)
 export const getMyOrders = async (req, res) => {
   try {
     const orders = await Order.find({ userId: req.user._id })
       .populate('shopId', 'name')
-      .populate('deliveryAgentId', 'name');
+      .populate({ path: 'deliveryAgentId', select: 'name phone' });
     res.status(200).json({ status: 'success', data: orders });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
 
-// ✅ Get delivery agent’s assigned orders
+// Get delivery agent’s assigned orders
 export const getAssignedOrders = async (req, res) => {
   try {
     const orders = await Order.find({ deliveryAgentId: req.user._id })
       .populate('shopId', 'name')
-      .populate('userId', 'name');
+      .populate('userId', 'name address');
     res.status(200).json({ status: 'success', data: orders });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
 
-// ✅ Track a single order (User/Delivery/Admin)
+// Track a single order
 export const trackOrder = async (req, res) => {
-  try {
-    const orderId = req.params.id;
+    try {
+        const order = await Order.findById(req.params.id)
+            .populate('userId', 'name email')
+            .populate('shopId', 'name location')
+            .populate({ path: 'deliveryAgentId', select: 'name phone isAvailable vehicleDetails' });
 
-    const order = await Order.findById(orderId)
-      .populate('userId', 'name email')
-      .populate('shopId', 'name location')
-      .populate('deliveryAgentId', 'name phone location');
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
 
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
+        // Authorization check
+        const isOwner = req.user.role === 'customer' && order.userId.toString() === req.user._id.toString();
+        const isAgent = req.user.role === 'delivery' && order.deliveryAgentId?._id.toString() === req.user._id.toString();
+        const isAdmin = req.user.role === 'admin';
+
+        if (!isOwner && !isAgent && !isAdmin) {
+            return res.status(403).json({ message: 'You are not authorized to view this order.' });
+        }
+        
+        res.status(200).json({ status: 'success', data: order });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to track order', message: err.message });
     }
-
-    // 🔒 Only user, agent, or admin can track
-    if (
-      req.user.role === 'user' && order.userId.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({ message: 'Unauthorized to track this order' });
-    }
-
-    if (
-      req.user.role === 'delivery' && order.deliveryAgentId?.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({ message: 'Not your assigned order' });
-    }
-
-    res.json({
-      status: order.status,
-      totalAmount: order.totalAmount,
-      deliveryAddress: order.deliveryAddress,
-      agent: order.deliveryAgentId ? {
-        name: order.deliveryAgentId.name,
-        phone: order.deliveryAgentId.phone,
-        location: order.deliveryAgentId.location
-      } : null,
-      placedAt: order.createdAt
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to track order' });
-  }
 };

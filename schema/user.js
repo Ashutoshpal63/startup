@@ -5,37 +5,68 @@ const addressSchema = new mongoose.Schema({
   street: String,
   city: String,
   pincode: String,
-  geo: {
-    lat: Number,
-    lng: Number
-  }
-});
+  geo: { lat: Number, lng: Number }
+}, { _id: false });
+
+const cartItemSchema = new mongoose.Schema({
+  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+  quantity: { type: Number, required: true, min: 1, default: 1 }
+}, { _id: false });
+
 
 const userSchema = new mongoose.Schema({
-  name: String,
-  email: { type: String, unique: true },
-  phone: String,
-  password: String,
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  phone: { type: String },
+  password: { type: String, required: true, select: false },
   address: addressSchema,
-  favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Shop' }],
+  
   role: {
     type: String,
-    enum: ['customer', 'shop', 'agent', 'admin','delivery'],
+    enum: ['customer', 'shop', 'delivery', 'admin'],
     default: 'customer'
   },
-  createdAt: { type: Date, default: Date.now }
-});
+  
+  // -- Delivery-agent specific fields --
+   cart: [cartItemSchema],
+  isAvailable: {
+    type: Boolean,
+    default: function() { return this.role === 'delivery' ? true : undefined; }
+  },
+  vehicleDetails: { 
+    type: String,
+    default: function() { return this.role === 'delivery' ? '' : undefined; }
+  },
+   currentLocation: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: function() { return this.role === 'delivery' ? 'Point' : undefined; }
+    },
+    coordinates: { type: [Number], index: '2dsphere' } // [longitude, latitude]
+  },
 
-// 🔐 Hash password before saving
+  // -- Shop-owner specific fields --
+  // This links a user of role 'shop' to the single shop they own.
+  shop: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Shop',
+    default: function() { return this.role === 'shop' ? null : undefined; }
+  }
+
+}, { timestamps: true });
+
+// Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 10);
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// 🔑 Compare entered password with hashed one
-userSchema.methods.matchPassword = function (enteredPassword) {
-  return bcrypt.compare(enteredPassword, this.password);
+// Compare entered password with hashed one
+userSchema.methods.matchPassword = async function (enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 
 export default mongoose.model('User', userSchema);
