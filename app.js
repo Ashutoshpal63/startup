@@ -4,9 +4,9 @@ import dotenv from 'dotenv';
 import http from 'http';
 import { Server } from 'socket.io'; 
 import cors from 'cors';
-import cookieParser from 'cookie-parser'; // <-- Import cookie-parser
-import session from 'express-session';    // <-- Import express-session
-import MongoStore from 'connect-mongo';   // <-- Import connect-mongo
+import cookieParser from 'cookie-parser';
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
 
 // Route Imports
 import authRoutes from './Routes/auth.routes.js';
@@ -26,17 +26,33 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] }
+  cors: { origin: "*", methods: ["GET", "POST"] } // This is for Socket.io, it can be permissive
 });
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
+// --- START OF CHANGE ---
 // Middleware
-// Enable CORS for frontend interaction
+// Production-ready CORS Configuration
+const allowedOrigins = [
+    'http://localhost:3000', // For your local development
+    'https://local-shop-frontend.onrender.com' // <-- IMPORTANT: PASTE YOUR LIVE FRONTEND URL HERE
+];
+
 app.use(cors({
-  origin: true, // You can restrict this to your frontend URL in production
-  credentials: true, // IMPORTANT: Allows cookies to be sent from the browser
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like Postman, mobile apps, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true, // IMPORTANT: Allows cookies/sessions to be sent
 }));
+// --- END OF CHANGE ---
+
 app.use(express.static("public"));
 
 // Stripe webhook needs raw body, so mount it before express.json()
