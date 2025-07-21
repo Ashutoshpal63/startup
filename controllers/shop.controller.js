@@ -1,4 +1,6 @@
 import Shop from '../schema/shop.js';
+// IMPORT THE UPLOAD UTILITY
+import { uploadOnCloudinary } from '../utils/cloudinary.js';
 
 export const createShop = async (req, res) => {
   try {
@@ -6,6 +8,22 @@ export const createShop = async (req, res) => {
     const existingShop = await Shop.findOne({ ownerId: req.user._id });
     if (existingShop) {
       return res.status(400).json({ message: 'You already own a shop.' });
+    }
+    const shopData = { ...req.body, ownerId: req.user._id };
+
+    // --- FILE UPLOAD LOGIC for multiple fields ---
+    // req.files will be an object like: { logo: [file], coverImage: [file] }
+    // The ?. operator safely checks if the properties exist.
+    if (req.files?.logo?.[0]) {
+        const logoLocalPath = req.files.logo[0].path;
+        const logo = await uploadOnCloudinary(logoLocalPath);
+        if (logo) shopData.logoUrl = logo.secure_url;
+    }
+
+    if (req.files?.coverImage?.[0]) {
+        const coverImageLocalPath = req.files.coverImage[0].path;
+        const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+        if (coverImage) shopData.coverImageUrl = coverImage.secure_url;
     }
 
     const newShop = await Shop.create({ ...req.body, ownerId: req.user._id });
@@ -52,6 +70,20 @@ export const updateShop = async (req, res) => {
     // Authorization: Only the owner or an admin can update.
     if (req.user.role !== 'admin' && shop.ownerId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'You are not authorized to update this shop' });
+    }
+    const updateData = { ...req.body };
+
+    // --- FILE UPLOAD LOGIC for updates ---
+    if (req.files?.logo?.[0]) {
+        const logoLocalPath = req.files.logo[0].path;
+        const logo = await uploadOnCloudinary(logoLocalPath);
+        if (logo) updateData.logoUrl = logo.secure_url;
+    }
+
+    if (req.files?.coverImage?.[0]) {
+        const coverImageLocalPath = req.files.coverImage[0].path;
+        const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+        if (coverImage) updateData.coverImageUrl = coverImage.secure_url;
     }
 
     const updated = await Shop.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });

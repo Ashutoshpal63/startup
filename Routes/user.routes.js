@@ -1,6 +1,9 @@
 import express from 'express';
 import User from '../schema/user.js';
 import { protect, restrictTo } from '../middleware/auth.middleware.js';
+// ADD THESE IMPORTS
+import { upload } from '../middleware/multer.middleware.js';
+import { uploadOnCloudinary } from '../utils/cloudinary.js';
 
 const router = express.Router();
 
@@ -10,9 +13,21 @@ router.get('/me', protect, (req, res) => {
 });
 
 // PUT /api/users/me (Update own profile for any logged in user)
-router.put('/me', protect, async (req, res) => {
+router.put('/me',  protect, upload.single('avatar'), async (req, res) => {
     // Prevent role changes via this route
     const { role, password, ...updateData } = req.body;
+     // --- AVATAR UPLOAD LOGIC ---
+        if (req.file) {
+            const avatarLocalPath = req.file.path;
+            const avatar = await uploadOnCloudinary(avatarLocalPath);
+            // Add the new avatar URL to our data object if upload was successful
+            if (avatar && avatar.url) {
+                updateData.avatar = avatar.secure_url;
+            } else {
+                console.error("Avatar upload to Cloudinary failed.");
+                // You could optionally return an error here if the avatar is mandatory
+            }
+        }
     
     const updatedUser = await User.findByIdAndUpdate(req.user._id, updateData, { new: true, runValidators: true });
     res.status(200).json({ status: 'success', data: updatedUser });

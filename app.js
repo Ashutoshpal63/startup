@@ -37,6 +37,7 @@ app.use(cors({
   origin: true, // You can restrict this to your frontend URL in production
   credentials: true, // IMPORTANT: Allows cookies to be sent from the browser
 }));
+app.use(express.static("public"));
 
 // Stripe webhook needs raw body, so mount it before express.json()
 app.use('/api/payment', paymentRoutes);

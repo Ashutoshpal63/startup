@@ -27,7 +27,8 @@ const sendTokenResponse = (user, statusCode, res) => {
 // Register New User (any role)
 export const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    // --- UPDATED: Destructure 'address' as well ---
+    const { name, email, password, role, address } = req.body;
 
     // Validate role
     const validRoles = ['customer', 'shop', 'delivery', 'admin'];
@@ -40,8 +41,8 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
-    // Create user (password will be hashed by pre-save hook)
-    const user = await User.create({ name, email, password, role });
+    // --- UPDATED: Pass the full data object, including address, to User.create ---
+    const user = await User.create({ name, email, password, role, address });
 
     sendTokenResponse(user, 201, res);
   } catch (err) {
@@ -49,6 +50,7 @@ export const register = async (req, res) => {
     res.status(500).json({ error: 'Registration failed', message: err.message });
   }
 };
+
 
 // Login User (any role)
 export const login = async (req, res) => {
