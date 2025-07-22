@@ -151,7 +151,7 @@ const users = [
       pincode: "302001"
     },
     favorites: [],
-    role: "shop",
+    role: "shopkeeper",
     createdAt: new Date("2025-06-27T05:22:23.183156")
   },
   {
@@ -165,7 +165,7 @@ const users = [
       pincode: "560001"
     },
     favorites: [],
-    role: "delivery",
+    role: "delivery_agent",
     createdAt: new Date("2025-06-27T05:22:23.183165")
   },
   {

@@ -9,11 +9,11 @@ export const createShop = async (req, res) => {
     if (existingShop) {
       return res.status(400).json({ message: 'You already own a shop.' });
     }
+    
+    // This variable will hold all our final data
     const shopData = { ...req.body, ownerId: req.user._id };
 
-    // --- FILE UPLOAD LOGIC for multiple fields ---
-    // req.files will be an object like: { logo: [file], coverImage: [file] }
-    // The ?. operator safely checks if the properties exist.
+    // File upload logic that correctly adds URLs to shopData
     if (req.files?.logo?.[0]) {
         const logoLocalPath = req.files.logo[0].path;
         const logo = await uploadOnCloudinary(logoLocalPath);
@@ -26,14 +26,18 @@ export const createShop = async (req, res) => {
         if (coverImage) shopData.coverImageUrl = coverImage.secure_url;
     }
 
-    const newShop = await Shop.create({ ...req.body, ownerId: req.user._id });
+    // --- THIS IS THE CORRECTED LINE ---
+    // We now use the `shopData` object which contains the image URLs.
+    const newShop = await Shop.create(shopData);
     
     // Link this shop to the user model
     req.user.shop = newShop._id;
-    await req.user.save();
+    // Added { validateBeforeSave: false } to prevent potential password validation issues
+    await req.user.save({ validateBeforeSave: false });
 
     res.status(201).json({ status: 'success', data: newShop });
   } catch (err) {
+    // This will now catch any real errors, not the file-not-found one.
     res.status(400).json({ status: 'error', message: err.message });
   }
 };
@@ -86,10 +90,10 @@ export const updateShop = async (req, res) => {
         if (coverImage) updateData.coverImageUrl = coverImage.secure_url;
     }
 
-    const updated = await Shop.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+   const updated = await Shop.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     res.status(200).json({ status: 'success', data: updated });
   } catch (err) {
-    res.status(400).json({ status: 'error', message: err.message });
+    next(err);
   }
 };
 

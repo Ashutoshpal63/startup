@@ -34,9 +34,17 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'accepted', 'out_for_delivery', 'delivered', 'cancelled'],
-    default: 'pending'
-  },
+    enum: [
+        'PENDING_APPROVAL',   // Customer places order, waits for shop
+        'REJECTED',           // Shop rejects the order
+        'PENDING_PAYMENT',    // Shop accepts, waits for customer payment
+        'PROCESSING',         // Customer paid, shop is preparing
+        'OUT_FOR_DELIVERY',   // Agent has picked it up
+        'DELIVERED',          // Agent marks as delivered
+        'CANCELLED'           // Customer or Admin cancels
+    ],
+    default: 'PENDING_APPROVAL'
+},
 }, { timestamps: true });
 
 export default mongoose.model('Order', orderSchema);

@@ -24,9 +24,9 @@ const userSchema = new mongoose.Schema({
   
   role: {
     type: String,
-    enum: ['customer', 'shop', 'delivery', 'admin'],
+    enum: ['customer', 'shopkeeper', 'delivery_agent', 'admin'],
     default: 'customer'
-  },
+},
   
   // -- Delivery-agent specific fields --
    cart: [cartItemSchema],

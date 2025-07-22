@@ -35,6 +35,7 @@ const MONGO_URI = process.env.MONGO_URI;
 // Middleware
 // Production-ready CORS Configuration
 const allowedOrigins = [
+    'http://localhost:5173',  
     'http://localhost:3000', // For your local development
     'https://local-shop-frontend.onrender.com' // <-- IMPORTANT: PASTE YOUR LIVE FRONTEND URL HERE
 ];
