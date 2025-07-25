@@ -7,7 +7,6 @@ import {
   deleteProduct
 } from '../controllers/product.controller.js';
 import { protect, restrictTo } from '../middleware/auth.middleware.js';
-// ADD THIS IMPORT
 import { upload } from '../middleware/multer.middleware.js';
 
 const router = express.Router();
@@ -16,11 +15,12 @@ const router = express.Router();
 router.get('/', getAllProducts);
 router.get('/:id', getProductById);
 
-// Protected routes for managing products
-// ADD "upload.single('productImage')" MIDDLEWARE
-router.post('/', protect, restrictTo('shop'), upload.single('productImage'), createProduct);
-router.put('/:id', protect, restrictTo('admin', 'shop'), upload.single('productImage'), updateProduct);
+// --- THIS IS THE CORRECTED LINE ---
+// The role was changed from 'shop' to 'shopkeeper' to match your user schema.
+router.post('/', protect, restrictTo('shopkeeper'), upload.single('productImage'), createProduct);
 
-router.delete('/:id', protect, restrictTo('admin', 'shop'), deleteProduct);
+// --- ALSO CORRECTED HERE ---
+router.put('/:id', protect, restrictTo('admin', 'shopkeeper'), upload.single('productImage'), updateProduct);
+router.delete('/:id', protect, restrictTo('admin', 'shopkeeper'), deleteProduct);
 
 export default router;

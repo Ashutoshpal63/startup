@@ -24,6 +24,8 @@ export const getAdminDashboard = async (req, res) => {
         { $group: { _id: null, total: { $sum: '$totalAmount' } } }
       ])
     ]);
+        // --- NEW DEBUGGING LOG ---
+    console.log("Revenue Query Result from DB:", JSON.stringify(totalRevenueResult, null, 2));
 
     const usersByRole = userCounts.reduce((acc, item) => ({ ...acc, [item._id]: item.count }), {});
     const totalUsers = userCounts.reduce((sum, item) => sum + item.count, 0);
@@ -33,6 +35,11 @@ export const getAdminDashboard = async (req, res) => {
 
     const ordersByStatus = orderStats.reduce((acc, item) => ({ ...acc, [item._id]: item.count }), {});
     const totalOrders = orderStats.reduce((sum, item) => sum + item.count, 0);
+
+
+    const finalRevenue = totalRevenueResult[0]?.total || 0;
+    console.log(`Final calculated revenue: ${finalRevenue}`); // Log final value
+
 
     res.status(200).json({
       status: 'success',

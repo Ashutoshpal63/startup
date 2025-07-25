@@ -9,7 +9,8 @@ import {
   getAvailableOrders,  // <-- NEWLY IMPORTED
   claimOrder,          // <-- NEWLY IMPORTED
   getMyDeliveries,     // <-- Renamed for clarity from getAssignedOrders
-  getAllOrders
+  getAllOrders,
+  assignAgentToOrder
 } from '../controllers/order.controller.js';
 import { protect, restrictTo } from '../middleware/auth.middleware.js';
 
@@ -46,7 +47,7 @@ router.patch('/:id/claim', protect, restrictTo('delivery_agent'), claimOrder);
 //                  ADMIN-SPECIFIC ROUTES
 // ---------------------------------------------------------------- //
 router.get('/', protect, restrictTo('admin'), getAllOrders);
-
+router.patch('/:id/assign-agent', protect, restrictTo('admin'), assignAgentToOrder);
 
 // ---------------------------------------------------------------- //
 //                  SHARED ROUTES (Accessible by multiple roles)
@@ -56,6 +57,5 @@ router.get('/:id/track', protect, trackOrder);
 
 // CORRECTED: This route now correctly allows shopkeepers to update status
 router.patch('/:id/status', protect, restrictTo('shopkeeper', 'admin', 'delivery_agent'), updateOrderStatus);
-
 
 export default router;

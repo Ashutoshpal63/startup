@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../schema/user.js';
-import Shop from '../schema/shop.js'; // <-- This import is essential
+import Shop from '../schema/shop.js';
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -12,12 +12,10 @@ const generateToken = (user) => {
 };
 
 // Register New User (any role)
-export const register = async (req, res, next) => { // <-- Use 'next' for error handling
+export const register = async (req, res, next) => {
   try {
-    // MODIFIED: Capture all fields from the body
     const { name, email, password, role, ...otherData } = req.body;
 
-    // MODIFIED: Role names must match the frontend exactly
     const validRoles = ['customer', 'shopkeeper', 'delivery_agent', 'admin'];
     if (role && !validRoles.includes(role)) {
         return res.status(400).json({ message: 'Invalid user role specified' });
@@ -28,38 +26,34 @@ export const register = async (req, res, next) => { // <-- Use 'next' for error 
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
-    // Create the user first with the basic details
     const user = await User.create({ name, email, password, role, address: otherData.address });
 
-    // --- NEW & CRITICAL LOGIC: Handle Shopkeeper Registration ---
+    // --- CRITICAL LOGIC: Handle Shopkeeper Registration ---
     if (role === 'shopkeeper') {
-      // Check for required shop details sent from the frontend
       if (!otherData.shopName || !otherData.shopCategory || !otherData.pincode) {
-        // If shop details are missing, the registration is incomplete.
-        // We delete the user we just created to keep the database clean.
         await User.findByIdAndDelete(user._id);
         return res.status(400).json({ message: 'Shop name, category, and pincode are required for shopkeepers.' });
       }
 
-      // Create a new Shop document and link it to the user
       const newShop = await Shop.create({
         name: otherData.shopName,
         ownerId: user._id,
         category: otherData.shopCategory,
         location: {
-          // You can enhance this later with geocoding if needed
           city: "Not specified", 
           pincode: otherData.pincode,
+          geo: {
+            type: 'Point',
+            coordinates: [0, 0] // Default coordinates [longitude, latitude]
+          }
         }
       });
       
-      // IMPORTANT: Link the created shop's ID back to the user document
+      // CRITICAL: Link the created shop's ID back to the user document
       user.shop = newShop._id;
-      await user.save({ validateBeforeSave: false }); // Save user without re-validating password
+      await user.save({ validateBeforeSave: false });
     }
-    // --- END OF NEW LOGIC ---
 
-    // Respond with a rich user object, token, and session
     req.session.user = {
       id: user._id,
       name: user.name,
@@ -79,13 +73,12 @@ export const register = async (req, res, next) => { // <-- Use 'next' for error 
     res.status(201).json({ status: 'success', data: { token, user: userPayload }});
 
   } catch (err) {
-    // Pass any errors to the global error handler
     next(err);
   }
 };
 
 // Login User (any role)
-export const login = async (req, res, next) => { // <-- Use 'next' for error handling
+export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -99,7 +92,6 @@ export const login = async (req, res, next) => { // <-- Use 'next' for error han
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Create a session for browser-based clients
     req.session.user = {
       id: user._id,
       name: user.name,
@@ -107,14 +99,13 @@ export const login = async (req, res, next) => { // <-- Use 'next' for error han
       role: user.role,
     };
 
-    // Prepare a rich user payload for the frontend state
     const token = generateToken(user);
     const userPayload = {
       _id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
-      shopId: user.shop, // <-- CRITICAL: Include the shopId for shopkeepers
+      shop: user.shop, // <-- CRITICAL: Include the shop field
     };
 
     res.status(200).json({
@@ -136,7 +127,7 @@ export const logout = (req, res) => {
         if (err) {
             return res.status(500).json({ message: "Could not log out, please try again."});
         }
-        res.clearCookie('connect.sid'); // This is the default session cookie name
+        res.clearCookie('connect.sid');
         res.status(200).json({ status: 'success', message: "Logged out successfully" });
     });
 };
