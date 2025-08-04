@@ -8,60 +8,84 @@ import mongoose from 'mongoose';
 //                  CUSTOMER CONTROLLERS
 // ---------------------------------------------------------------- //
 
-export const createOrder = async (req, res, next) => {
+/**
+ * @description Customer checks out their entire cart, creating one order per shop.
+ *              This is the new primary function for creating orders.
+ * @route POST /api/orders/checkout-all
+ */
+export const createOrdersFromCart = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const { shopId } = req.body;
     const user = await User.findById(req.user.id).populate('cart.productId').session(session);
 
     if (!user.cart || user.cart.length === 0) {
       return res.status(400).json({ message: 'Your cart is empty.' });
     }
 
-    const itemsFromShop = user.cart.filter(item => item.productId.shopId.toString() === shopId);
-    if (itemsFromShop.length === 0) {
-      return res.status(400).json({ message: 'No items from this shop in your cart.' });
-    }
+    // 1. Group all cart items by their shop ID
+    const groupedByShop = user.cart.reduce((acc, item) => {
+      // Ensure productId and shopId exist before processing
+      if (item.productId && item.productId.shopId) {
+        const shopId = item.productId.shopId.toString();
+        if (!acc[shopId]) {
+          acc[shopId] = [];
+        }
+        acc[shopId].push(item);
+      }
+      return acc;
+    }, {});
 
-    let totalAmount = 0;
-    const orderProducts = [];
+    const createdOrderIds = [];
 
-    for (const item of itemsFromShop) {
-      const product = await Product.findById(item.productId._id).session(session);
+    // 2. Loop through each shop group and create a separate order for it
+    for (const shopId in groupedByShop) {
+      const itemsFromShop = groupedByShop[shopId];
+      let totalAmount = 0;
+      const orderProducts = [];
 
-      if (!product || product.quantityAvailable < item.quantity) {
-        await session.abortTransaction();
-        return res.status(400).json({ message: `Product "${item.productId.name}" is out of stock or unavailable.` });
+      for (const item of itemsFromShop) {
+        const product = await Product.findById(item.productId._id).session(session);
+        if (!product || product.quantityAvailable < item.quantity) {
+          await session.abortTransaction();
+          return res.status(400).json({ message: `Product "${item.productId.name}" is out of stock.` });
+        }
+        product.quantityAvailable -= item.quantity;
+        await product.save({ session });
+        totalAmount += item.quantity * product.price;
+        orderProducts.push({
+          productId: product._id,
+          name: product.name,
+          quantity: item.quantity,
+          price: product.price,
+        });
       }
 
-      product.quantityAvailable -= item.quantity;
-      await product.save({ session });
+      const [newOrder] = await Order.create([{
+        userId: user._id,
+        shopId,
+        products: orderProducts,
+        totalAmount,
+        deliveryAddress: user.address,
+        status: 'PENDING_APPROVAL',
+      }], { session });
 
-      totalAmount += item.quantity * product.price;
-      orderProducts.push({
-        productId: product._id,
-        name: product.name,
-        quantity: item.quantity,
-        price: product.price,
-      });
+      createdOrderIds.push(newOrder._id);
     }
 
-    const [newOrder] = await Order.create([{
-      userId: user._id,
-      shopId,
-      products: orderProducts,
-      totalAmount,
-      deliveryAddress: user.address,
-      status: 'PENDING_APPROVAL',
-    }], { session });
-
-    user.cart = user.cart.filter(item => item.productId.shopId.toString() !== shopId);
+    // 3. Clear the user's entire cart
+    user.cart = [];
     await user.save({ session });
 
+    // 4. If everything was successful, commit the transaction
     await session.commitTransaction();
-    res.status(201).json({ status: 'success', data: newOrder });
+
+    res.status(201).json({ 
+      status: 'success', 
+      message: 'Orders placed successfully for all shops.',
+      data: { createdOrderIds }
+    });
 
   } catch (err) {
     await session.abortTransaction();
@@ -70,6 +94,7 @@ export const createOrder = async (req, res, next) => {
     session.endSession();
   }
 };
+
 
 export const getMyOrders = async (req, res, next) => {
   try {
@@ -257,12 +282,6 @@ export const getAllOrders = async (req, res, next) => {
   }
 };
 
-
-// --- THIS IS THE NEW FUNCTION THAT WAS MISSING ---
-/**
- * @description Admin assigns an available delivery agent to an order. Atomic transaction.
- * @route PATCH /api/orders/:id/assign-agent
- */
 export const assignAgentToOrder = async (req, res, next) => {
     const { agentId } = req.body;
     const { id: orderId } = req.params;
@@ -287,7 +306,6 @@ export const assignAgentToOrder = async (req, res, next) => {
             return res.status(400).json({ message: 'Order is not ready to be assigned.' });
         }
 
-        // Assign agent to order and mark agent as unavailable
         order.deliveryAgentId = agent._id;
         agent.isAvailable = false;
 

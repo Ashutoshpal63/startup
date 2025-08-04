@@ -6,11 +6,22 @@ import Product from '../schema/product.js';
 // Get user's cart
 export const getCart = async (req, res, next) => {
   try {
+    // --- THIS IS THE CORRECTED QUERY ---
     const user = await User.findById(req.user.id).populate({
-      path: 'cart.productId',
+      path: 'cart.productId', // Populate the product in the cart
       model: 'Product',
-      select: 'name price imageUrl'
+      // NESTED POPULATE: Also populate the shopId inside the product
+      populate: {
+        path: 'shopId',
+        model: 'Shop',
+        select: 'name' // We only need the shop's name for the cart page
+      }
     });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     res.status(200).json({ status: 'success', data: user.cart });
   } catch (err) {
     next(err);
