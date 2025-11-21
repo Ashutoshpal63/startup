@@ -16,7 +16,7 @@ export const getAdminDashboard = async (req, res) => {
 
     const [userCounts, shopStats, orderStats, revenueData] = results;
 
-    // Debug log remains but formatted differently
+    // Debug log remains but formatted
     console.log("Revenue Data =>", JSON.stringify(revenueData, null, 2));
 
     const usersByRole = Object.fromEntries(
