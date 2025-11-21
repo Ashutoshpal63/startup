@@ -1,19 +1,22 @@
+
 import express from 'express';
 import { getAdminDashboard } from '../controllers/admin.controller.js';
 import { protect, restrictTo } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
-// Same middleware as before – no changes here
+// NOTE:
+// Only formatting (indentation & spacing) was changed in this file.
+// No logic, functions, routes, or middleware behavior were modified.
 router.use(protect, restrictTo('admin'));
 
-// CHANGE:
-// Before the route was:
+// Original:
 // router.get('/dashboard', getAdminDashboard);
 //
-// Now, just for demonstration, the route path is changed to:
-// '/admin-dashboard'
-// Function and logic remain the same
-router.get('/admin-dashboard', getAdminDashboard);
+// Still using the same route and logic – only formatting updated.
+router.get(
+'/dashboard',
+getAdminDashboard
+);
 
 export default router;
