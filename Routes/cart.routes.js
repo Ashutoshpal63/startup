@@ -6,7 +6,7 @@ import { protect, restrictTo } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
-// All cart routes are protected and for customers only
+// All cart routes are protected and for customers only.
 router.use(protect, restrictTo('customer'));
 
 router.route('/')
