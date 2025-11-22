@@ -37,7 +37,7 @@ export const protect = async (req, res, next) => {
   return res.status(401).json({ message: 'Not authorized, please log in' });
 };
 
-// Restrict access to specific roles
+// Restrict access to specific roles.
 export const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
