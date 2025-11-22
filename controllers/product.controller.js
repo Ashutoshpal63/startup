@@ -8,7 +8,18 @@ export const createProduct = async (req, res, next) => {
   session.startTransaction();
 
   try {
-    if (!req.file) {
+    let imageUrl = '';
+
+    if (req.file) {
+      const productImageLocalPath = req.file.path;
+      const productImage = await uploadOnCloudinary(productImageLocalPath);
+      if (!productImage || !productImage.secure_url) {
+        return res.status(500).json({ message: 'Failed to upload product image to Cloudinary.' });
+      }
+      imageUrl = productImage.secure_url;
+    } else if (req.body.imageUrl) {
+      imageUrl = req.body.imageUrl;
+    } else {
       return res.status(400).json({ message: 'Product image is required.' });
     }
 
@@ -18,16 +29,10 @@ export const createProduct = async (req, res, next) => {
       return res.status(403).json({ message: 'You do not own a shop. Cannot create a product.' });
     }
 
-    const productImageLocalPath = req.file.path;
-    const productImage = await uploadOnCloudinary(productImageLocalPath);
-    if (!productImage || !productImage.secure_url) {
-      return res.status(500).json({ message: 'Failed to upload product image to Cloudinary.' });
-    }
-
-    const [product] = await Product.create([{ 
-        ...req.body, 
-        shopId: userShop._id,
-        imageUrl: productImage.secure_url,
+    const [product] = await Product.create([{
+      ...req.body,
+      shopId: userShop._id,
+      imageUrl: imageUrl,
     }], { session });
 
     userShop.products.push(product._id);
@@ -92,15 +97,15 @@ export const deleteProduct = async (req, res, next) => {
     }
 
     if (req.user.role === 'shopkeeper') {
-       const shop = await Shop.findOne({ _id: product.shopId, ownerId: req.user._id }).session(session);
+      const shop = await Shop.findOne({ _id: product.shopId, ownerId: req.user._id }).session(session);
       if (!shop) {
         await session.abortTransaction();
         return res.status(403).json({ message: 'You are not authorized to delete this product.' });
       }
     }
-    
+
     await Product.findByIdAndDelete(id, { session });
-    
+
     await Shop.updateOne({ _id: product.shopId }, { $pull: { products: product._id } }, { session });
 
     await session.commitTransaction();
@@ -116,34 +121,34 @@ export const deleteProduct = async (req, res, next) => {
 
 export const getAllProducts = async (req, res, next) => {
   try {
-    const { 
-        category, shopId, minPrice, maxPrice, name, page = 1, limit = 10,
-        latitude, longitude, radius = 10
+    const {
+      category, shopId, minPrice, maxPrice, name, page = 1, limit = 10,
+      latitude, longitude, radius = 10
     } = req.query;
 
     const filter = { quantityAvailable: { $gt: 0 } };
-    
-    if (shopId) {
-        filter.shopId = shopId;
-    } 
-    else if (latitude && longitude && !isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude))) {
-        const lat = parseFloat(latitude);
-        const lng = parseFloat(longitude);
-        const radiusInKm = parseFloat(radius) || 10;
-        const radiusInRadians = radiusInKm / 6378.1;
 
-        const nearbyShops = await Shop.find({
-            'location.geo': {
-                $geoWithin: { $centerSphere: [[lng, lat], radiusInRadians] }
-            }
-        }).select('_id');
-        
-        const nearbyShopIds = nearbyShops.map(shop => shop._id);
-        if (nearbyShopIds.length > 0) {
-          filter.shopId = { $in: nearbyShopIds };
-        } else {
-          return res.status(200).json({ status: 'success', total: 0, page: 1, pages: 0, data: [] });
+    if (shopId) {
+      filter.shopId = shopId;
+    }
+    else if (latitude && longitude && !isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude))) {
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      const radiusInKm = parseFloat(radius) || 10;
+      const radiusInRadians = radiusInKm / 6378.1;
+
+      const nearbyShops = await Shop.find({
+        'location.geo': {
+          $geoWithin: { $centerSphere: [[lng, lat], radiusInRadians] }
         }
+      }).select('_id');
+
+      const nearbyShopIds = nearbyShops.map(shop => shop._id);
+      if (nearbyShopIds.length > 0) {
+        filter.shopId = { $in: nearbyShopIds };
+      } else {
+        return res.status(200).json({ status: 'success', total: 0, page: 1, pages: 0, data: [] });
+      }
     }
 
     if (category) filter.category = String(category);
@@ -161,7 +166,7 @@ export const getAllProducts = async (req, res, next) => {
       .skip(skip)
       .limit(Number(limit))
       .sort({ createdAt: -1 });
-      
+
     res.status(200).json({
       status: 'success',
       total,
@@ -169,8 +174,8 @@ export const getAllProducts = async (req, res, next) => {
       pages: Math.ceil(total / limit),
       data: products
     });
-  } catch (err) { 
-      next(err);
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -178,10 +183,10 @@ export const getProductById = async (req, res, next) => {
   try {
     const product = await Product.findById(req.params.id).populate('shopId');
     if (!product) {
-        return res.status(404).json({ status: 'fail', message: 'Product not found' });
+      return res.status(404).json({ status: 'fail', message: 'Product not found' });
     }
     res.status(200).json({ status: 'success', data: product });
   } catch (err) {
-      next(err);
+    next(err);
   }
 };

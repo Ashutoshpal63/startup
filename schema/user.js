@@ -20,29 +20,33 @@ const userSchema = new mongoose.Schema({
   phone: { type: String },
   password: { type: String, required: true, select: false },
   address: addressSchema,
-  avatar:{type: String},
-  
+  avatar: { type: String },
+
   role: {
     type: String,
     enum: ['customer', 'shopkeeper', 'delivery_agent', 'admin'],
     default: 'customer'
-},
-  
+  },
+
   // -- Delivery-agent specific fields --
-   cart: [cartItemSchema],
+  cart: [cartItemSchema],
   isAvailable: {
     type: Boolean,
-    default: function() { return this.role === 'delivery' ? true : undefined; }
+    default: function () { return this.role === 'delivery' ? true : undefined; }
   },
-  vehicleDetails: { 
+  isOnline: {
+    type: Boolean,
+    default: function () { return this.role === 'delivery' ? false : undefined; }
+  },
+  vehicleDetails: {
     type: String,
-    default: function() { return this.role === 'delivery' ? '' : undefined; }
+    default: function () { return this.role === 'delivery' ? '' : undefined; }
   },
-   currentLocation: {
+  currentLocation: {
     type: {
       type: String,
       enum: ['Point'],
-      default: function() { return this.role === 'delivery' ? 'Point' : undefined; }
+      default: function () { return this.role === 'delivery' ? 'Point' : undefined; }
     },
     coordinates: { type: [Number], index: '2dsphere' } // [longitude, latitude]
   },
@@ -52,7 +56,7 @@ const userSchema = new mongoose.Schema({
   shop: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Shop',
-    default: function() { return this.role === 'shop' ? null : undefined; }
+    default: function () { return this.role === 'shop' ? null : undefined; }
   }
 
 }, { timestamps: true });

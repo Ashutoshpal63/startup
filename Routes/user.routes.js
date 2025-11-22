@@ -11,13 +11,13 @@ const router = express.Router();
 
 // A utility to create a structured error (optional but recommended)
 class AppError extends Error {
-  constructor(message, statusCode) {
-    super(message);
-    this.statusCode = statusCode;
-    this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
-    this.isOperational = true; // Flag for errors we create ourselves
-    Error.captureStackTrace(this, this.constructor);
-  }
+    constructor(message, statusCode) {
+        super(message);
+        this.statusCode = statusCode;
+        this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
+        this.isOperational = true; // Flag for errors we create ourselves
+        Error.captureStackTrace(this, this.constructor);
+    }
 }
 
 // GET /api/users/me (Get own profile for any logged in user)
@@ -35,7 +35,7 @@ router.put('/me', protect, upload.single('avatar'), async (req, res, next) => {
         if (req.file) {
             const avatarLocalPath = req.file.path;
             const avatar = await uploadOnCloudinary(avatarLocalPath);
-            
+
             if (avatar && avatar.secure_url) {
                 updateData.avatar = avatar.secure_url;
             } else {
@@ -43,13 +43,35 @@ router.put('/me', protect, upload.single('avatar'), async (req, res, next) => {
                 // Optionally, you could return an error here if the avatar is critical
             }
         }
-    
+
         const updatedUser = await User.findByIdAndUpdate(req.user._id, updateData, { new: true, runValidators: true });
-        
+
         res.status(200).json({ status: 'success', data: updatedUser });
 
     } catch (err) {
         // **FIX**: All errors are now passed to the global handler.
+        next(err);
+    }
+});
+
+// PATCH /api/users/availability (Delivery Agent: Toggle Online Status)
+router.patch('/availability', protect, restrictTo('delivery_agent'), async (req, res, next) => {
+    try {
+        const { isOnline } = req.body;
+
+        if (typeof isOnline !== 'boolean') {
+            return res.status(400).json({ message: 'isOnline must be a boolean value.' });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            { isOnline },
+            { new: true, runValidators: true }
+        );
+
+        res.status(200).json({ status: 'success', data: { isOnline: user.isOnline } });
+
+    } catch (err) {
         next(err);
     }
 });
@@ -63,7 +85,7 @@ router.get('/', async (req, res, next) => {
         // **FIX**: Implement whitelisting to prevent NoSQL injection vulnerabilities.
         const allowedFilters = ['role', 'email', 'name', 'isAvailable'];
         const filter = {};
-        
+
         for (const key in req.query) {
             if (allowedFilters.includes(key)) {
                 // For boolean values, ensure they are parsed correctly
