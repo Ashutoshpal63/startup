@@ -5,7 +5,7 @@ import User from '../schema/user.js';
 export const protect = async (req, res, next) => {
   // 1. Check for active session first (for browsers)
   if (req.session && req.session.user) {
-    // Session exists, find the full user object from DB and attach to req
+    // Session exists, find the full user object from DB and attach to req.
     req.user = await User.findById(req.session.user.id);
     if (req.user) {
         return next();
