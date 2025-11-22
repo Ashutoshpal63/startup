@@ -33,6 +33,7 @@ const MONGO_URI = process.env.MONGO_URI;
 const allowedOrigins = [
     'http://localhost:5173',  
     'http://localhost:3000',
+    'bazaryo-frontend.vercel.app',
     'https://local-shop-frontend.onrender.com'
 ];
 

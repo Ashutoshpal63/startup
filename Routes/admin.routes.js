@@ -7,5 +7,5 @@ const router = express.Router();
 router.use(protect, restrictTo('admin'));
 
 router.get('/dashboard', getAdminDashboard);
-
+// export router
 export default router;

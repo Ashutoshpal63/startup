@@ -5,7 +5,7 @@ import User from '../schema/user.js';
 export const protect = async (req, res, next) => {
   // 1. Check for active session first (for browsers)
   if (req.session && req.session.user) {
-    // Session exists, find the full user object from DB and attach to req
+    // Session exists, find the full user object from DB and attach to req.
     req.user = await User.findById(req.session.user.id);
     if (req.user) {
         return next();
@@ -37,7 +37,7 @@ export const protect = async (req, res, next) => {
   return res.status(401).json({ message: 'Not authorized, please log in' });
 };
 
-// Restrict access to specific roles
+// Restrict access to specific roles.
 export const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {

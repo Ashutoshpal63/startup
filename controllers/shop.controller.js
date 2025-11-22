@@ -10,7 +10,7 @@ export const createShop = async (req, res) => {
       return res.status(400).json({ message: 'You already own a shop.' });
     }
     
-    // This variable will hold all our final data
+    // This variable will hold all our final data.
     const shopData = { ...req.body, ownerId: req.user._id };
 
     // File upload logic that correctly adds URLs to shopData

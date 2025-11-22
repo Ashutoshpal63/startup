@@ -16,7 +16,7 @@ export const processDummyPayment = async (req, res, next) => {
 
     console.log(`Processing dummy payment for Order ID: ${orderId}...`);
 
-    // This part runs in the background AFTER we've responded to the user
+    // This part runs in the background AFTER we've responded to the user.
     setTimeout(async () => {
       try {
         const orderToUpdate = await Order.findById(orderId);
