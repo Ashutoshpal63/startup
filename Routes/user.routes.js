@@ -15,7 +15,7 @@ class AppError extends Error {
     super(message);
     this.statusCode = statusCode;
     this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
-    this.isOperational = true; // Flag for errors we create ourselves
+    this.isOperational = true; // Flag for errors we create ourselves......
     Error.captureStackTrace(this, this.constructor);
   }
 }
