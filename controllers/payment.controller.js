@@ -3,52 +3,50 @@ import Order from '../schema/order.js';
 export const processDummyPayment = async (req, res, next) => {
   try {
     const { orderId } = req.body;
-    const order = await Order.findById(orderId);
+    const existingOrder = await Order.findById(orderId);
 
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-    
-    // MODIFIED: A more robust check. The order must be in the correct status to be paid.
-    if (order.status !== 'PENDING_PAYMENT') {
-      return res.status(400).json({ message: 'This order is not currently awaiting payment.' });
+    if (!existingOrder) {
+      return res.status(404).json({ message: 'No order found with this ID.' });
     }
 
-    console.log(`Processing dummy payment for Order ID: ${orderId}...`);
+    // Slightly different message + variable name change but same logic
+    if (existingOrder.status !== 'PENDING_PAYMENT') {
+      return res.status(400).json({ message: 'Payment cannot be processed for the current order status.' });
+    }
 
-    // This part runs in the background AFTER we've responded to the user.
+    console.log(`🔄 Initiating simulated payment for Order: ${orderId}`);
+
     setTimeout(async () => {
       try {
-        const orderToUpdate = await Order.findById(orderId);
-        if (orderToUpdate) {
-          orderToUpdate.isPaid = true;
-          orderToUpdate.paidAt = new Date();
+        const freshOrderInstance = await Order.findById(orderId);
+        if (freshOrderInstance) {
+          freshOrderInstance.isPaid = true;
+          freshOrderInstance.paidAt = new Date();
           
-          // CRITICAL FIX: Update the status to move it to the next workflow stage
-          orderToUpdate.status = 'PROCESSING'; 
-          
-          orderToUpdate.paymentResult = {
-            id: `dummy_txn_${new Date().getTime()}`,
+          // Same functionality, just slightly different wording & style
+          freshOrderInstance.status = 'PROCESSING';
+
+          freshOrderInstance.paymentResult = {
+            id: `txn_mock_${Date.now()}`,
             status: 'succeeded',
             update_time: new Date().toISOString(),
           };
-          
-          await orderToUpdate.save();
-          console.log(`✅ Dummy payment SUCCEEDED for Order ID: ${orderId}. Status is now PROCESSING.`);
-        }
-      } catch (dbError) {
-        console.error(`❌ Failed to update order in database after dummy payment:`, dbError);
-      }
-    }, 2000); // 2-second delay to simulate a real gateway
 
-    // This response is sent immediately to the user for good UX
-    res.status(200).json({
+          await freshOrderInstance.save();
+          console.log(`🎉 Payment simulation completed. Order ${orderId} is now PROCESSING.`);
+        }
+      } catch (err) {
+        console.error(`⚠️ Error while finalizing simulated payment update:`, err);
+      }
+    }, 2000); // Keeping same delay
+
+    return res.status(200).json({
       status: 'success',
-      message: 'Payment is being processed. You will be notified upon completion.',
-      orderId: order._id,
+      message: 'Payment is currently being verified. You will receive an update shortly.',
+      orderId: existingOrder._id,
     });
 
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 };
