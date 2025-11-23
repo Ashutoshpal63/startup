@@ -18,7 +18,7 @@ const storage = multer.diskStorage({
     cb(null, destinationPath);
   },
 
-  // The filename function tells Multer what to name the file.
+  // The filename function tells Multer what to name the file
   filename: function (req, file, cb) {
     // To prevent conflicts if multiple users upload a file with the same name at the same time,
     // we can add a unique prefix. Date.now() is a simple way to do this.
