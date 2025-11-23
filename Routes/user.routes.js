@@ -9,7 +9,7 @@ import { uploadOnCloudinary } from '../utils/cloudinary.js';
 
 const router = express.Router();
 
-// A utility to create a structured error (optional but recommended)
+// A utility to create a structured error  **(optional but recommended)
 class AppError extends Error {
   constructor(message, statusCode) {
     super(message);
