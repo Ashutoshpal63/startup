@@ -38,5 +38,5 @@ mongoose.connect(process.env.MONGO_URI)
   })
   .catch(err => {
     console.error('❌ Error inserting users:', err);
-    mongoose.disconnect();
+    mongoose.disconnect();//mongoose disconnect
   });
