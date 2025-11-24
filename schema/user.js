@@ -32,21 +32,21 @@ const userSchema = new mongoose.Schema({
   cart: [cartItemSchema],
   isAvailable: {
     type: Boolean,
-    default: function () { return this.role === 'delivery' ? true : undefined; }
+    default: function () { return this.role === 'delivery_agent' ? true : undefined; }
   },
   isOnline: {
     type: Boolean,
-    default: function () { return this.role === 'delivery' ? false : undefined; }
+    default: function () { return this.role === 'delivery_agent' ? false : undefined; }
   },
   vehicleDetails: {
     type: String,
-    default: function () { return this.role === 'delivery' ? '' : undefined; }
+    default: function () { return this.role === 'delivery_agent' ? '' : undefined; }
   },
   currentLocation: {
     type: {
       type: String,
       enum: ['Point'],
-      default: function () { return this.role === 'delivery' ? 'Point' : undefined; }
+      default: function () { return this.role === 'delivery_agent' ? 'Point' : undefined; }
     },
     coordinates: { type: [Number], index: '2dsphere' } // [longitude, latitude]
   },

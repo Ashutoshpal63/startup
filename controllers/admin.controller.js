@@ -9,7 +9,7 @@ export const getAdminDashboard = async (req, res) => {
       Shop.aggregate([{ $group: { _id: '$isVerified', count: { $sum: 1 } } }]),
       Order.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
       Order.aggregate([
-        { $match: { status: 'delivered' } },
+        { $match: { status: 'DELIVERED' } },
         { $group: { _id: null, total: { $sum: '$totalAmount' } } }
       ])
     ]);

@@ -1,0 +1,50 @@
+Connected to DB
+Found 10 delivery agents.
+- ID: 687f8f608242f342f228eb8c
+  Name: Priya Sharma
+  Email: priya.sharma@deliv.com
+  isOnline: false (boolean)
+  isAvailable: true (boolean)
+---
+- ID: 69220c9ac6c6de4334317bdd
+  Name: Test Agent
+  Email: agent_1763839128928@test.com
+  isOnline: false (boolean)
+  isAvailable: true (boolean)
+---
+- ID: 69220cad6078a6d78a0788db
+  Name: Test Agent
+  Email: agent_1763839148764@test.com
+  isOnline: false (boolean)
+  isAvailable: true (boolean)
+---
+- ID: 69220cdb9e40c9c08db5d24d
+  Name: Test Agent
+  Email: agent_1763839194493@test.com
+  isOnline: false (boolean)
+  isAvailable: true (boolean)
+---
+- ID: 6923f5f60626c459efb71f03
+  Name: Test Agent
+  Email: agent_1763964405422@test.com
+  isOnline: false (boolean)
+  isAvailable: true (boolean)
+---
+- ID: 6923f6940626c459efb71f15
+  Name: Test Agent
+  Email: agent_1763964563078@test.com
+  isOnline: false (boolean)
+  isAvailable: true (boolean)
+---
+- ID: 6923f6d00626c459efb71f27
+  Name: Test Agent
+  Email: agent_1763964623303@test.com
+  isOnline: false (boolean)
+  isAvailable: true (boolean)
+---
+- ID: 6923f7100626c459efb71f39
+  Name: Test Agent
+  Email: agent_1763964687517@test.com
+  isOnline: false (boolean)
+  isAvailable: true (boolean)
+---

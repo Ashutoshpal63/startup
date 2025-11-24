@@ -1,0 +1,53 @@
+🚀 Starting Verification Flow...
+Health Check: 200 🚀 API is working!
+
+--- 1. Registration ---
+Registering customer...
+✅ Registered customer: customer_1763964775753@test.com
+Registering shopkeeper...
+✅ Registered shopkeeper: shopkeeper_1763964775753@test.com
+   Shop ID: 6923f768d5074e92082fde11
+Registering delivery_agent...
+✅ Registered delivery_agent: agent_1763964775753@test.com
+Registering admin...
+✅ Registered admin: admin_1763964775753@test.com
+
+--- 2. Product Creation ---
+✅ Product Created
+
+--- 3. Add to Cart ---
+✅ Added to Cart
+
+--- 4. Checkout ---
+✅ Checkout Successful
+   Order ID: 6923f76bd5074e92082fde27
+
+--- 5. Approve Order ---
+✅ Order Approved (Status: PENDING_PAYMENT)
+
+--- 6. Process Payment ---
+✅ Payment Initiated
+
+--- 7. Verify Payment Status ---
+✅ Order Status is PROCESSING
+
+--- 8. Claim Order ---
+   Attempting to claim while offline...
+✅ Correctly blocked claiming while offline.
+   Going Online...
+✅ Agent is now Online.
+   Setting Unavailable (via /users/me)...
+✅ Agent set to Unavailable.
+   Attempting to claim while Online but Unavailable...
+✅ Correctly blocked claiming while unavailable.
+   Agent set back to Available.
+   Attempting to claim while online...
+✅ Order Claimed by Agent
+
+--- 9. Out for Delivery ---
+✅ Status Updated to OUT_FOR_DELIVERY
+
+--- 10. Delivered ---
+✅ Status Updated to DELIVERED
+
+🎉 Verification Complete!

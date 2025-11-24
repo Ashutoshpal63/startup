@@ -151,15 +151,24 @@ export const claimOrder = async (req, res, next) => {
       return res.status(400).json({ message: 'Order is not available for claiming.' });
     }
 
-    order.deliveryAgentId = req.user.id;
-
     const agent = await User.findById(req.user.id).session(session);
+    console.log(`[DEBUG] Claiming order ${req.params.id}. Agent: ${agent._id}, isOnline: ${agent.isOnline}, isAvailable: ${agent.isAvailable}`);
 
     if (!agent.isOnline) {
       await session.abortTransaction();
-      return res.status(400).json({ message: 'You must be online to claim orders.' });
+      return res.status(400).json({
+        message: `You must be online to claim orders. (Debug: Online=${agent.isOnline}, Available=${agent.isAvailable}, ID=${agent._id})`
+      });
     }
 
+    if (!agent.isAvailable) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message: `You are not available to claim orders. Please set yourself as available first. (Debug: Online=${agent.isOnline}, Available=${agent.isAvailable}, ID=${agent._id})`
+      });
+    }
+
+    order.deliveryAgentId = req.user.id;
     agent.isAvailable = false;
 
     await agent.save({ session });

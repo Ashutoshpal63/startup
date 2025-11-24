@@ -132,7 +132,7 @@ export const deleteProduct = async (req, res, next) => {
 export const getAllProducts = async (req, res, next) => {
   try {
     const {
-      category, shopId, minPrice, maxPrice, name,
+      category, shopId, minPrice, maxPrice, name, search, // Added search
       page = 1, limit = 10, latitude, longitude, radius = 10
     } = req.query;
 
@@ -154,8 +154,10 @@ export const getAllProducts = async (req, res, next) => {
     }
 
     // Apply optional filters (category, price, name)
-    if (category) filter.category = String(category);
-    if (name) filter.name = new RegExp(String(name), 'i');
+    if (category) filter.category = new RegExp(String(category), 'i'); // Case-insensitive category
+
+    const searchTerm = name || search; // Use name OR search
+    if (searchTerm) filter.name = new RegExp(String(searchTerm), 'i');
 
     if (minPrice || maxPrice) {
       filter.price = {};

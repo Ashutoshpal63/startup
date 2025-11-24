@@ -1,8 +1,8 @@
 import express from 'express';
 import User from '../schema/user.js';
-import Shop from '../schema/shop.js';       // <-- **FIX**: Imported for cascading deletes
-import Product from '../schema/product.js'; // <-- **FIX**: Imported for cascading deletes
-import mongoose from 'mongoose';            // <-- **FIX**: Imported for transactions
+import Shop from '../schema/shop.js';
+import Product from '../schema/product.js';
+import mongoose from 'mongoose';
 import { protect, restrictTo } from '../middleware/auth.middleware.js';
 import { upload } from '../middleware/multer.middleware.js';
 import { uploadOnCloudinary } from '../utils/cloudinary.js';
@@ -57,7 +57,14 @@ router.put('/me', protect, upload.single('avatar'), async (req, res, next) => {
 // PATCH /api/users/availability (Delivery Agent: Toggle Online Status)
 router.patch('/availability', protect, restrictTo('delivery_agent'), async (req, res, next) => {
     try {
-        const { isOnline } = req.body;
+        let { isOnline } = req.body;
+        console.log(`[DEBUG] Toggling availability for user ${req.user._id}. New status: ${isOnline} (type: ${typeof isOnline})`);
+
+        // Convert string "true"/"false" to boolean if necessary
+        if (typeof isOnline === 'string') {
+            if (isOnline.toLowerCase() === 'true') isOnline = true;
+            else if (isOnline.toLowerCase() === 'false') isOnline = false;
+        }
 
         if (typeof isOnline !== 'boolean') {
             return res.status(400).json({ message: 'isOnline must be a boolean value.' });

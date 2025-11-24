@@ -215,6 +215,50 @@ async function run() {
             console.error('❌ Failed to go online:', onlineRes.data);
         }
 
+        // 8b-2. Set Unavailable (but Online) - Should Fail
+        // Wait, there is no direct endpoint to toggle isAvailable in the provided routes?
+        // Let's check user.routes.js.
+        // It only has PATCH /availability for isOnline.
+        // Is there a way to set isAvailable?
+        // Admin can update users? Or maybe the agent can?
+        // Looking at user.routes.js, there is NO route for agent to update isAvailable directly?
+        // Wait, let me check user.routes.js again.
+        // It has router.patch('/availability', ... { isOnline } ...).
+        // It does NOT seem to allow updating isAvailable.
+        // If so, how does an agent become available?
+        // Maybe they are available by default? Yes, schema says default true.
+        // But if they deliver an order, they become unavailable (set in controller).
+        // And when they deliver, they become available again (set in controller).
+        // So I cannot manually set isAvailable to false to test this, unless I use Admin or direct DB update?
+        // Admin route: router.put('/me', ...) updates own profile but excludes role/password.
+        // Does it exclude isAvailable?
+        // user.routes.js line 33: const { role, password, ...updateData } = req.body;
+        // So 'me' route allows updating isAvailable?
+        // Let's try updating isAvailable via /users/me.
+
+        console.log('   Setting Unavailable (via /users/me)...');
+        const unavailRes = await request('PUT', '/users/me', { isAvailable: false }, TOKENS.delivery_agent);
+        if (unavailRes.status === 200 && unavailRes.data.data.isAvailable === false) {
+            console.log('✅ Agent set to Unavailable.');
+
+            console.log('   Attempting to claim while Online but Unavailable...');
+            const failAvailRes = await request('PATCH', `/orders/${ORDER_ID}/claim`, null, TOKENS.delivery_agent);
+            if (failAvailRes.status === 400) {
+                console.log('✅ Correctly blocked claiming while unavailable.');
+            } else {
+                console.error('❌ Should have failed to claim while unavailable, but got:', failAvailRes.status);
+            }
+
+            // Set back to Available
+            await request('PUT', '/users/me', { isAvailable: true }, TOKENS.delivery_agent);
+            console.log('   Agent set back to Available.');
+
+        } else {
+            console.log('⚠️ Could not set unavailable via /users/me. Skipping "Online but Unavailable" test.');
+            // This might happen if 'isAvailable' is protected or not in schema?
+            // Schema has it.
+        }
+
         // 8c. Claim Order - Should Succeed
         console.log('   Attempting to claim while online...');
         const res = await request('PATCH', `/orders/${ORDER_ID}/claim`, null, TOKENS.delivery_agent);
