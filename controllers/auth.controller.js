@@ -11,7 +11,7 @@ const generateToken = (user) => {
   );
 };
 
-// Register New User (any role)
+// Create New Account (user)
 export const register = async (req, res, next) => {
   try {
     const { name, email, password, role, ...otherData } = req.body;
