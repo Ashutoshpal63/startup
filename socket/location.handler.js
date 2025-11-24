@@ -30,7 +30,7 @@ const initializeSocket = (io) => {
         console.error('Error updating agent location in DB:', err);
       }
       
-      // 2. Broadcast the new location to the customer in the same order room
+      // Send the new location coordinates via the order room socket.
       socket.to(orderId).emit('locationUpdated', { agentId, location });
     });
 
