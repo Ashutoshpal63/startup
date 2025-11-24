@@ -34,7 +34,7 @@ const allowedOrigins = [
     'http://localhost:5173',  
     'http://localhost:3000',
     'https://bazaryo-frontend.vercel.app',
-    'https://local-shop-frontend.onrender.com'
+    'https://bazayo.onrender.com'
 ];
 
 const io = new Server(server, {
