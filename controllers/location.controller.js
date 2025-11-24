@@ -42,7 +42,7 @@ export const geocodeAddress = async (req, res) => {
       });
     }
 
-    // No data found
+    // Run if no data found
     return res.status(404).json({ message: 'Could not geocode address' });
 
   } catch (error) {
