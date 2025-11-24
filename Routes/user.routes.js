@@ -9,7 +9,7 @@ import { uploadOnCloudinary } from '../utils/cloudinary.js';
 
 const router = express.Router();
 
-// A utility to create a structured error (optional but recommended)
+// A utility to create a structured error  **(optional but recommended)
 class AppError extends Error {
     constructor(message, statusCode) {
         super(message);
@@ -83,7 +83,7 @@ router.patch('/availability', protect, restrictTo('delivery_agent'), async (req,
     }
 });
 
-// --- Admin Only Routes ---
+// --- Admin's Routes ---
 router.use(protect, restrictTo('admin')); // Apply middleware to all routes below
 
 // GET /api/users (Admin: Get all users with filtering)

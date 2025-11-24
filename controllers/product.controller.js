@@ -1,7 +1,8 @@
+// ================== IMPORTS ==================
+import mongoose from 'mongoose';
 import Product from '../schema/product.js';
 import Shop from '../schema/shop.js';
 import { uploadOnCloudinary } from '../utils/cloudinary.js';
-import mongoose from 'mongoose';
 
 // ================== CREATE PRODUCT ==================
 export const createProduct = async (req, res, next) => {
@@ -9,34 +10,35 @@ export const createProduct = async (req, res, next) => {
   session.startTransaction();
 
   try {
-    // Validate required image file
+    // Check if image exists
     if (!req.file) {
       return res.status(400).json({ message: 'Product image is required.' });
     }
 
-    // Verify user has a shop
+    // Verify that user has a shop
     const userShop = await Shop.findOne({ ownerId: req.user._id }).session(session);
     if (!userShop) {
       await session.abortTransaction();
       return res.status(403).json({ message: 'You do not own a shop. Cannot create a product.' });
     }
 
-    // Upload image to Cloudinary
+    // Upload product image
     const uploadedImage = await uploadOnCloudinary(req.file.path);
     if (!uploadedImage?.secure_url) {
       return res.status(500).json({ message: 'Failed to upload product image to Cloudinary.' });
     }
 
-    // Create the product
-    const [newProduct] = await Product.create([
-      { ...req.body, shopId: userShop._id, imageUrl: uploadedImage.secure_url }
-    ], { session });
+    // Create product entry
+    const [newProduct] = await Product.create(
+      [{ ...req.body, shopId: userShop._id, imageUrl: uploadedImage.secure_url }],
+      { session }
+    );
 
     // Add product to shop
     userShop.products.push(newProduct._id);
     await userShop.save({ session });
 
-    // Commit transaction
+    // Finalize transaction
     await session.commitTransaction();
     res.status(201).json({ status: 'success', data: newProduct });
 
@@ -58,7 +60,7 @@ export const updateProduct = async (req, res, next) => {
       return res.status(404).json({ status: 'fail', message: 'Product not found' });
     }
 
-    // Shopkeeper authorization check
+    // Authorization check for shopkeeper
     if (req.user.role === 'shopkeeper') {
       const ownsShop = await Shop.findOne({ _id: product.shopId, ownerId: req.user._id });
       if (!ownsShop) {
@@ -68,7 +70,7 @@ export const updateProduct = async (req, res, next) => {
 
     const updates = { ...req.body };
 
-    // If new image uploaded, update it
+    // Handle new image upload if provided
     if (req.file) {
       const uploadedImage = await uploadOnCloudinary(req.file.path);
       if (uploadedImage?.secure_url) {
@@ -78,7 +80,7 @@ export const updateProduct = async (req, res, next) => {
 
     const updatedProduct = await Product.findByIdAndUpdate(id, updates, {
       new: true,
-      runValidators: true
+      runValidators: true,
     });
 
     res.status(200).json({ status: 'success', data: updatedProduct });
@@ -101,7 +103,7 @@ export const deleteProduct = async (req, res, next) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    // Verify shop ownership
+    // Check shop ownership
     if (req.user.role === 'shopkeeper') {
       const shop = await Shop.findOne({ _id: product.shopId, ownerId: req.user._id }).session(session);
       if (!shop) {
@@ -110,7 +112,7 @@ export const deleteProduct = async (req, res, next) => {
       }
     }
 
-    // Delete product and remove reference in shop
+    // Remove product and reference
     await Product.findByIdAndDelete(id, { session });
     await Shop.updateOne(
       { _id: product.shopId },
@@ -132,20 +134,22 @@ export const deleteProduct = async (req, res, next) => {
 export const getAllProducts = async (req, res, next) => {
   try {
     const {
-      category, shopId, minPrice, maxPrice, name, search, // Added search
+      category, shopId, minPrice, maxPrice, name,
       page = 1, limit = 10, latitude, longitude, radius = 10
     } = req.query;
 
-    // Base filter: product must be available
     const filter = { quantityAvailable: { $gt: 0 } };
 
-    // Filter by shopId OR by geo location
+    // Filter by shop or geo-location
     if (shopId) {
       filter.shopId = shopId;
-    } else if (latitude && longitude && !isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude))) {
+    } else if (latitude && longitude) {
       const rad = (parseFloat(radius) || 10) / 6378.1;
+
       const shops = await Shop.find({
-        'location.geo': { $geoWithin: { $centerSphere: [[parseFloat(longitude), parseFloat(latitude)], rad] } }
+        'location.geo': {
+          $geoWithin: { $centerSphere: [[parseFloat(longitude), parseFloat(latitude)], rad] },
+        },
       }).select('_id');
 
       const shopIds = shops.map(s => s._id);
@@ -154,10 +158,8 @@ export const getAllProducts = async (req, res, next) => {
     }
 
     // Apply optional filters (category, price, name)
-    if (category) filter.category = new RegExp(String(category), 'i'); // Case-insensitive category
-
-    const searchTerm = name || search; // Use name OR search
-    if (searchTerm) filter.name = new RegExp(String(searchTerm), 'i');
+    if (category) filter.category = String(category);
+    if (name) filter.name = new RegExp(String(name), 'i');
 
     if (minPrice || maxPrice) {
       filter.price = {};
@@ -165,7 +167,6 @@ export const getAllProducts = async (req, res, next) => {
       if (!isNaN(Number(maxPrice))) filter.price.$lte = Number(maxPrice);
     }
 
-    // Pagination settings
     const skip = (Number(page) - 1) * Number(limit);
     const total = await Product.countDocuments(filter);
 
@@ -180,7 +181,7 @@ export const getAllProducts = async (req, res, next) => {
       total,
       page: Number(page),
       pages: Math.ceil(total / limit),
-      data: products
+      data: products,
     });
   } catch (err) {
     next(err);
@@ -199,3 +200,4 @@ export const getProductById = async (req, res, next) => {
     next(err);
   }
 };
+

@@ -1,25 +1,25 @@
 import Shop from '../schema/shop.js';
-// IMPORT THE UPLOAD UTILITY
-import { uploadOnCloudinary } from '../utils/cloudinary.js';
+import { uploadOnCloudinary as uploadFile } from '../utils/cloudinary.js';
 
+// Create Shop Controller
 export const createShop = async (req, res) => {
   try {
-    // A shop owner cannot create more than one shop.
-    const existingShop = await Shop.findOne({ ownerId: req.user._id });
-    if (existingShop) {
+    const alreadyExists = await Shop.findOne({ ownerId: req.user._id });
+    if (alreadyExists) {
       return res.status(400).json({ message: 'You already own a shop.' });
     }
 
     // This variable will hold all our final data.
     const shopData = { ...req.body, ownerId: req.user._id };
 
-    // File upload logic that correctly adds URLs to shopData
+    // Upload logo if provided
     if (req.files?.logo?.[0]) {
       const logoLocalPath = req.files.logo[0].path;
       const logo = await uploadOnCloudinary(logoLocalPath);
       if (logo) shopData.logoUrl = logo.secure_url;
     }
 
+    // Upload cover image if provided
     if (req.files?.coverImage?.[0]) {
       const coverImageLocalPath = req.files.coverImage[0].path;
       const coverImage = await uploadOnCloudinary(coverImageLocalPath);
@@ -35,49 +35,58 @@ export const createShop = async (req, res) => {
     // Added { validateBeforeSave: false } to prevent potential password validation issues
     await req.user.save({ validateBeforeSave: false });
 
-    res.status(201).json({ status: 'success', data: newShop });
-  } catch (err) {
-    // This will now catch any real errors, not the file-not-found one.
-    res.status(400).json({ status: 'error', message: err.message });
+    res.status(201).json({ status: 'success', data: createdShop });
+  } catch (error) {
+    res.status(400).json({ status: 'error', message: error.message });
   }
 };
 
+// Get All Shops
 export const getAllShops = async (req, res) => {
   try {
-    // This logic is for Admins, so it's simple
-    const shops = await Shop.find().populate('ownerId', 'name email').populate('products');
-    res.status(200).json({ status: 'success', data: shops });
+    const shopList = await Shop.find()
+      .populate('ownerId', 'name email')
+      .populate('products');
+
+    res.status(200).json({ status: 'success', data: shopList });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }
 };
 
+// Get Shop by ID
 export const getShopById = async (req, res) => {
   try {
-    const shop = await Shop.findById(req.params.id).populate('ownerId', 'name email').populate('products');
-    if (!shop) {
+    const foundShop = await Shop.findById(req.params.id)
+      .populate('ownerId', 'name email')
+      .populate('products');
+
+    if (!foundShop) {
       return res.status(404).json({ status: 'fail', message: 'Shop not found' });
     }
-    res.status(200).json({ status: 'success', data: shop });
-  } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+
+    res.status(200).json({ status: 'success', data: foundShop });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.message });
   }
 };
 
-export const updateShop = async (req, res, next) => {
+export const updateShop = async (req, res) => {
   try {
-    const shop = await Shop.findById(req.params.id);
-    if (!shop) {
+    const shopToUpdate = await Shop.findById(req.params.id);
+
+    if (!shopToUpdate) {
       return res.status(404).json({ message: 'Shop not found' });
     }
 
-    // Authorization: Only the owner or an admin can update.
-    if (req.user.role !== 'admin' && shop.ownerId.toString() !== req.user._id.toString()) {
+    // Role-based Access Check
+    if (req.user.role !== 'admin' && shopToUpdate.ownerId.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'You are not authorized to update this shop' });
     }
-    const updateData = { ...req.body };
 
-    // --- FILE UPLOAD LOGIC for updates ---
+    const updatedData = { ...req.body };
+
+    // File updates (logo & cover image)
     if (req.files?.logo?.[0]) {
       const logoLocalPath = req.files.logo[0].path;
       const logo = await uploadOnCloudinary(logoLocalPath);
@@ -97,14 +106,17 @@ export const updateShop = async (req, res, next) => {
   }
 };
 
+// Delete Shop
 export const deleteShop = async (req, res) => {
   try {
-    const deleted = await Shop.findByIdAndDelete(req.params.id);
-    if (!deleted) {
+    const removedShop = await Shop.findByIdAndDelete(req.params.id);
+
+    if (!removedShop) {
       return res.status(404).json({ message: 'Shop not found' });
     }
+
     res.status(204).json({ status: 'success', message: 'Shop deleted' });
-  } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.message });
   }
 };

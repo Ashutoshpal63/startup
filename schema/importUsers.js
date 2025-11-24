@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // --- THIS IS THE FIX ---
-// Go one directory UP ('..') from the current script's location (`__dirname`) 
+// Look into the folder one level higher than __dirname.
 // to find the root `.env` file.
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
@@ -38,5 +38,5 @@ mongoose.connect(process.env.MONGO_URI)
   })
   .catch(err => {
     console.error('❌ Error inserting users:', err);
-    mongoose.disconnect();
+    mongoose.disconnect();//mongoose disconnect
   });

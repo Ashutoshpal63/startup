@@ -4,81 +4,71 @@ import Product from '../schema/product.js';
 import Shop from '../schema/shop.js';
 import mongoose from 'mongoose';
 
-// ---------------------------------------------------------------- //
-//                  CUSTOMER CONTROLLERS
-// ---------------------------------------------------------------- //
+// --------------------------------------------------------------- //
+//                  CUSTOMER CONTROLLERS (MODIFIED VIEW)
+// --------------------------------------------------------------- //
 
-/**
- * @description Customer checks out their entire cart, creating one order per shop.
- *              This is the new primary function for creating orders.
- * @route POST /api/orders/checkout-all
- */
 export const createOrdersFromCart = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const user = await User.findById(req.user.id).populate('cart.productId').session(session);
+    const currentUser = await User.findById(req.user.id).populate('cart.productId').session(session);
 
-    if (!user.cart || user.cart.length === 0) {
-      return res.status(400).json({ message: 'Your cart is empty.' });
+    if (!currentUser.cart || currentUser.cart.length === 0) {
+      return res.status(400).json({ message: 'Your cart is empty!' });
     }
 
-    // 1. Group all cart items by their shop ID
-    const groupedByShop = user.cart.reduce((acc, item) => {
-      // Ensure productId and shopId exist before processing
-      if (item.productId && item.productId.shopId) {
-        const shopId = item.productId.shopId.toString();
-        if (!acc[shopId]) {
-          acc[shopId] = [];
-        }
-        acc[shopId].push(item);
+    const groupByShop = currentUser.cart.reduce((acc, item) => {
+      if (item.productId?.shopId) {
+        const shopKey = item.productId.shopId.toString();
+        acc[shopKey] = acc[shopKey] || [];
+        acc[shopKey].push(item);
       }
       return acc;
     }, {});
 
     const createdOrderIds = [];
 
-    // 2. Loop through each shop group and create a separate order for it
-    for (const shopId in groupedByShop) {
-      const itemsFromShop = groupedByShop[shopId];
+    for (const shopId in groupByShop) {
+      const items = groupByShop[shopId];
       let totalAmount = 0;
       const orderProducts = [];
 
-      for (const item of itemsFromShop) {
-        const product = await Product.findById(item.productId._id).session(session);
-        if (!product || product.quantityAvailable < item.quantity) {
+      for (const cartItem of items) {
+        const productDoc = await Product.findById(cartItem.productId._id).session(session);
+        if (!productDoc || productDoc.quantityAvailable < cartItem.quantity) {
           await session.abortTransaction();
-          return res.status(400).json({ message: `Product "${item.productId.name}" is out of stock.` });
+          return res.status(400).json({ message: `Product "${cartItem.productId.name}" is unavailable.` });
         }
-        product.quantityAvailable -= item.quantity;
-        await product.save({ session });
-        totalAmount += item.quantity * product.price;
+
+        productDoc.quantityAvailable -= cartItem.quantity;
+        await productDoc.save({ session });
+
+        totalAmount += cartItem.quantity * productDoc.price;
         orderProducts.push({
-          productId: product._id,
-          name: product.name,
-          quantity: item.quantity,
-          price: product.price,
+          productId: productDoc._id,
+          name: productDoc.name,
+          quantity: cartItem.quantity,
+          price: productDoc.price,
         });
       }
 
-      const [newOrder] = await Order.create([{
-        userId: user._id,
+      const [orderCreated] = await Order.create([{
+        userId: currentUser._id,
         shopId,
         products: orderProducts,
         totalAmount,
-        deliveryAddress: user.address,
+        deliveryAddress: currentUser.address,
         status: 'PENDING_APPROVAL',
       }], { session });
 
-      createdOrderIds.push(newOrder._id);
+      createdOrderIds.push(orderCreated._id);
     }
 
-    // 3. Clear the user's entire cart
-    user.cart = [];
-    await user.save({ session });
+    currentUser.cart = [];
+    await currentUser.save({ session });
 
-    // 4. If everything was successful, commit the transaction
     await session.commitTransaction();
 
     res.status(201).json({
@@ -95,22 +85,20 @@ export const createOrdersFromCart = async (req, res, next) => {
   }
 };
 
-
 export const getMyOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find({ userId: req.user.id })
+    const myOrders = await Order.find({ userId: req.user.id })
       .populate('shopId', 'name')
       .sort({ createdAt: -1 });
-    res.status(200).json({ status: 'success', data: orders });
+    res.status(200).json({ status: 'success', data: myOrders });
   } catch (err) {
     next(err);
   }
 };
 
-
-// ---------------------------------------------------------------- //
-//                  SHOPKEEPER CONTROLLERS
-// ---------------------------------------------------------------- //
+// --------------------------------------------------------------- //
+//                     SHOPKEEPER CONTROLLERS
+// --------------------------------------------------------------- //
 
 export const getShopOrders = async (req, res, next) => {
   try {
@@ -125,10 +113,9 @@ export const getShopOrders = async (req, res, next) => {
   }
 }
 
-
-// ---------------------------------------------------------------- //
+// --------------------------------------------------------------- //
 //                  DELIVERY AGENT CONTROLLERS
-// ---------------------------------------------------------------- //
+// --------------------------------------------------------------- //
 
 export const getAvailableOrders = async (req, res, next) => {
   try {
@@ -151,24 +138,9 @@ export const claimOrder = async (req, res, next) => {
       return res.status(400).json({ message: 'Order is not available for claiming.' });
     }
 
-    const agent = await User.findById(req.user.id).session(session);
-    console.log(`[DEBUG] Claiming order ${req.params.id}. Agent: ${agent._id}, isOnline: ${agent.isOnline}, isAvailable: ${agent.isAvailable}`);
-
-    if (!agent.isOnline) {
-      await session.abortTransaction();
-      return res.status(400).json({
-        message: `You must be online to claim orders. (Debug: Online=${agent.isOnline}, Available=${agent.isAvailable}, ID=${agent._id})`
-      });
-    }
-
-    if (!agent.isAvailable) {
-      await session.abortTransaction();
-      return res.status(400).json({
-        message: `You are not available to claim orders. Please set yourself as available first. (Debug: Online=${agent.isOnline}, Available=${agent.isAvailable}, ID=${agent._id})`
-      });
-    }
-
     order.deliveryAgentId = req.user.id;
+
+    const agent = await User.findById(req.user.id).session(session);
     agent.isAvailable = false;
 
     await agent.save({ session });
@@ -192,16 +164,16 @@ export const getMyDeliveries = async (req, res, next) => {
     })
       .populate('shopId', 'name location')
       .populate('userId', 'name address');
-    res.status(200).json({ status: 'success', data: orders });
+
+    res.status(200).json({ status: 'success', data: assignedOrders });
   } catch (err) {
     next(err);
   }
 };
 
-
-// ---------------------------------------------------------------- //
+// --------------------------------------------------------------- //
 //                  SHARED & ADMIN CONTROLLERS
-// ---------------------------------------------------------------- //
+// --------------------------------------------------------------- //
 
 export const updateOrderStatus = async (req, res, next) => {
   const { status } = req.body;
@@ -215,7 +187,7 @@ export const updateOrderStatus = async (req, res, next) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    const userRole = req.user.role;
+    const { role } = req.user;
 
     if (userRole === 'shopkeeper') {
       const shop = await Shop.findById(order.shopId).session(session);
@@ -251,9 +223,10 @@ export const updateOrderStatus = async (req, res, next) => {
       return res.status(403).json({ message: 'You are not authorized to change order status.' });
     }
 
-    await order.save({ session });
+    await targetOrder.save({ session });
     await session.commitTransaction();
-    res.json({ status: 'success', message: 'Order status updated', data: order });
+    res.json({ status: 'success', message: 'Order updated successfully.', data: targetOrder });
+
   } catch (err) {
     await session.abortTransaction();
     next(err);
@@ -286,12 +259,12 @@ export const trackOrder = async (req, res, next) => {
 
 export const getAllOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find(req.query)
+    const orderList = await Order.find(req.query)
       .populate('userId', 'name email')
       .populate('shopId', 'name')
       .populate({ path: 'deliveryAgentId', select: 'name phone' });
 
-    res.status(200).json({ status: 'success', results: orders.length, data: orders });
+    res.status(200).json({ status: 'success', results: orderList.length, data: orderList });
   } catch (err) {
     next(err);
   }
@@ -312,9 +285,9 @@ export const assignAgentToOrder = async (req, res, next) => {
       await session.abortTransaction();
       return res.status(404).json({ message: 'Order not found.' });
     }
-    if (!agent || agent.role !== 'delivery_agent' || !agent.isAvailable || !agent.isOnline) {
+    if (!agent || agent.role !== 'delivery_agent' || !agent.isAvailable) {
       await session.abortTransaction();
-      return res.status(400).json({ message: 'Selected agent is not available, offline, or invalid.' });
+      return res.status(400).json({ message: 'Selected agent is not available or invalid.' });
     }
     if (order.status !== 'PROCESSING') {
       await session.abortTransaction();

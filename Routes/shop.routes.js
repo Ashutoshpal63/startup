@@ -11,7 +11,7 @@ import { upload } from '../middleware/multer.middleware.js';
 
 const router = express.Router();
 
-// This part is correct
+
 const shopImageUpload = upload.fields([
     { name: 'logo', maxCount: 1 },
     { name: 'coverImage', maxCount: 1 }

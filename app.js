@@ -12,7 +12,7 @@ import session from 'express-session';
 import MongoStore from 'connect-mongo';
 
 // THE BAD IMPORT IS NOW GONE.
-// WE NO LONGER IMPORT ANYTHING DIRECTLY FROM 'utils/cloudinary.js' IN THIS FILE.
+// Removed direct dependency on utils/cloudinary.js.
 
 // Route Imports
 import authRoutes from './Routes/auth.routes.js';
@@ -33,7 +33,7 @@ const MONGO_URI = process.env.MONGO_URI;
 const allowedOrigins = [
     'http://localhost:5173',  
     'http://localhost:3000',
-    'bazaryo-frontend.vercel.app',
+    'https://bazaryo-frontend.vercel.app',
     'https://local-shop-frontend.onrender.com'
 ];
 
