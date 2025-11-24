@@ -26,7 +26,7 @@ export const geocodeAddress = async (req, res) => {
       }
     );
 
-    // Check if results exist
+    // Check existence of result
     if (response?.data?.length > 0) {
       const result = response.data[0];
 
