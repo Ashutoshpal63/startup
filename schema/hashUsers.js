@@ -13,7 +13,7 @@ const updatePasswords = async () => {
 try {
 await mongoose.connect(MONGO_URI);
 console.log('✅ Connected to MongoDB');
-// Establishes MongoDB connection
+// Connect to MongoDB
 
 ```
 const hashed = await bcrypt.hash('123456', 10);
