@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../schema/user.js';
 
-// Protect routes by verifying session or token and attaching user to request
+// Protect routes by verifying session or token and attaching user to request....
 export const protect = async (req, res, next) => {
   // 1. Check for active session first (for browsers)
   if (req.session && req.session.user) {
