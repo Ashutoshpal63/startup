@@ -6,7 +6,7 @@ import { protect } from '../middleware/auth.middleware.js';
 const router = express.Router();
 
 // POST route to process a dummy payment
-// 'protect' middleware ensures only logged-in users can access this route
+// 'protect' middleware will  ensures only logged-in users can access this route
 router.post('/process-payment', protect, processDummyPayment);
 
 export default router;
