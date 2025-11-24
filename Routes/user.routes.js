@@ -54,7 +54,7 @@ router.put('/me', protect, upload.single('avatar'), async (req, res, next) => {
     }
 });
 
-// --- Admin Only Routes ---
+// --- Admin's Routes ---
 router.use(protect, restrictTo('admin')); // Apply middleware to all routes below
 
 // GET /api/users (Admin: Get all users with filtering)
