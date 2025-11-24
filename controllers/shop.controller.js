@@ -68,7 +68,7 @@ export const getShopById = async (req, res) => {
   }
 };
 
-// Update Shop
+// To update shop
 export const updateShop = async (req, res, next) => {
   try {
     const shopToUpdate = await Shop.findById(req.params.id);
