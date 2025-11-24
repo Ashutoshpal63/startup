@@ -48,7 +48,7 @@ const userSchema = new mongoose.Schema({
   },
 
   // -- Shop-owner specific fields --
-  // This links a user of role 'shop' to the single shop they own.
+  // The user account with the 'shop' role is mapped to the exclusive shop they operate
   shop: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Shop',
