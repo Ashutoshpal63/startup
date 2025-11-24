@@ -9,27 +9,27 @@ export const createShop = async (req, res) => {
     if (existingShop) {
       return res.status(400).json({ message: 'You already own a shop.' });
     }
-    
+
     // This variable will hold all our final data.
     const shopData = { ...req.body, ownerId: req.user._id };
 
     // File upload logic that correctly adds URLs to shopData
     if (req.files?.logo?.[0]) {
-        const logoLocalPath = req.files.logo[0].path;
-        const logo = await uploadOnCloudinary(logoLocalPath);
-        if (logo) shopData.logoUrl = logo.secure_url;
+      const logoLocalPath = req.files.logo[0].path;
+      const logo = await uploadOnCloudinary(logoLocalPath);
+      if (logo) shopData.logoUrl = logo.secure_url;
     }
 
     if (req.files?.coverImage?.[0]) {
-        const coverImageLocalPath = req.files.coverImage[0].path;
-        const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-        if (coverImage) shopData.coverImageUrl = coverImage.secure_url;
+      const coverImageLocalPath = req.files.coverImage[0].path;
+      const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+      if (coverImage) shopData.coverImageUrl = coverImage.secure_url;
     }
 
     // --- THIS IS THE CORRECTED LINE ---
     // We now use the `shopData` object which contains the image URLs.
     const newShop = await Shop.create(shopData);
-    
+
     // Link this shop to the user model
     req.user.shop = newShop._id;
     // Added { validateBeforeSave: false } to prevent potential password validation issues
@@ -64,7 +64,7 @@ export const getShopById = async (req, res) => {
   }
 };
 
-export const updateShop = async (req, res) => {
+export const updateShop = async (req, res, next) => {
   try {
     const shop = await Shop.findById(req.params.id);
     if (!shop) {
@@ -79,18 +79,18 @@ export const updateShop = async (req, res) => {
 
     // --- FILE UPLOAD LOGIC for updates ---
     if (req.files?.logo?.[0]) {
-        const logoLocalPath = req.files.logo[0].path;
-        const logo = await uploadOnCloudinary(logoLocalPath);
-        if (logo) updateData.logoUrl = logo.secure_url;
+      const logoLocalPath = req.files.logo[0].path;
+      const logo = await uploadOnCloudinary(logoLocalPath);
+      if (logo) updateData.logoUrl = logo.secure_url;
     }
 
     if (req.files?.coverImage?.[0]) {
-        const coverImageLocalPath = req.files.coverImage[0].path;
-        const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-        if (coverImage) updateData.coverImageUrl = coverImage.secure_url;
+      const coverImageLocalPath = req.files.coverImage[0].path;
+      const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+      if (coverImage) updateData.coverImageUrl = coverImage.secure_url;
     }
 
-   const updated = await Shop.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
+    const updated = await Shop.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     res.status(200).json({ status: 'success', data: updated });
   } catch (err) {
     next(err);
